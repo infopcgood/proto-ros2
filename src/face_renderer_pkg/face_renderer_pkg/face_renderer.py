@@ -29,7 +29,7 @@ class FaceRendererNode(Node):
         if future.result().success:
             self.get_logger().info('Got screen control permission!')
             self.image_pub = self.create_publisher(Image, 'screen_display', 10)
-            self.expression_sub = self.create_subscription(FacialExpression, '/facial_expression', self.expression_sub_cb, 10)
+            self.expression_sub = self.create_subscription(FacialExpression, 'facial_expression', self.expression_sub_cb, 10)
             self.create_timer(1 / FACE_FPS, self.render_face_timer_cb)
         else:
             self.get_logger().info('Failed to get screen control! Exiting...')
