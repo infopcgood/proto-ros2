@@ -11,7 +11,7 @@ SCREEN_HEIGHT = 32
 FACE_FPS = 24
 
 AVAILABLE_FACE_PARTS = ['mouth', 'eyes']
-FACE_PART_CORNER_LOCATION = [(16, 20), (0, 0)]
+FACE_PART_CORNER_LOCATION = [(16, 16), (0, 0)]
 
 class FaceRendererNode(Node):
     def __init__(self, image_path):

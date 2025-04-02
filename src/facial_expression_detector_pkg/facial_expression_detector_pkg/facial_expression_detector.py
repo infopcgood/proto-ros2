@@ -19,15 +19,14 @@ class FacialExpressionDetectorNode(Node):
         super().__init__('facial_expression_detector_node')
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor('/home/info/proto-ros2/src/facial_expression_detector_pkg/shape_predictor_68_face_landmarks.dat')
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
         self.continuous_frames = 0
         self.expression_pub = self.create_publisher(FacialExpression, 'facial_expression', 10)
         self.create_timer(1 / 60, self.capture_expression_cb)
 
     def capture_expression_cb(self):
         self.continuous_frames += 1
-        if self.continuous_frames <= 30:
-            return
+        
         ret, frame = self.cap.read()
         if not ret:
             return
@@ -42,16 +41,27 @@ class FacialExpressionDetectorNode(Node):
         left_eye_opened = (length(shape[37], shape[41]) + length(shape[38], shape[40])) / (2 * length(shape[36], shape[39]))
         right_eye_opened = (length(shape[43], shape[47]) + length(shape[44], shape[46])) / (2 * length(shape[42], shape[45]))
         eye_opened = (left_eye_opened + right_eye_opened) / 2
+        if self.continuous_frames >= 30:
+            expression = FacialExpression()
+            expression.type = 'eyes'
+            if eye_opened >= 0.28:
+                expression.expression = 'idle'
+            elif eye_opened >= 0.16:
+                expression.expression = 'half-closed'
+            else:
+                expression.expression = 'closed'
+            self.expression_pub.publish(expression)
+            self.continuous_frames = 0
+        mouth_opened = length(shape[62], shape[66]) / length(shape[60], shape[64])
         expression = FacialExpression()
-        expression.type = 'eyes'
-        if eye_opened >= 0.28:
-            expression.expression = 'idle'
-        elif eye_opened >= 0.16:
-            expression.expression = 'half-closed'
+        expression.type = 'mouth'
+        if mouth_opened >= 0.4:
+            expression.expression = 'open'
+        elif mouth_opened >= 0.135:
+            expression.expression = 'half-open'
         else:
-            expression.expression = 'closed'
+            expression.expression = 'idle'
         self.expression_pub.publish(expression)
-        self.continuous_frames = 0
 
 def main(args=None):
     rclpy.init(args=args)
