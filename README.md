@@ -57,4 +57,4 @@ colcon build
 ```
 After building, add `source (repository_directory)/install/local_setup.bash` to your `.bashrc`. Exit and reopen the shell.
 
-TODO: startup using crontab
+Finally, use a method of your choice(`crontab`, `systemd`, etc...) to start `launch.sh` on startup.
