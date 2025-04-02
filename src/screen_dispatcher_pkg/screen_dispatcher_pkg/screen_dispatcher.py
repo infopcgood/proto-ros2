@@ -58,7 +58,7 @@ class ScreenDispatcherNode(Node):
         frame = (np.array(image.data).reshape((SCREEN_HEIGHT, SCREEN_WIDTH, 3)) * (SCREEN_BRIGHTNESS / 100)).astype(np.uint8)
         self.canvas.paste(PIL.Image.fromarray(frame), (0, 0))
         self.canvas.paste(PIL.Image.fromarray(frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not FLIP_SECOND_SCREEN else 1), :]), (0, SCREEN_HEIGHT))
-        self.framebuffer[:] = np.asarray(self.canvas)
+        self.framebuffer[:] = np.asarray(self.canvas)[::-1]
         self.matrix.show()
 
     ## request_sub_cb function
