@@ -13,7 +13,6 @@ SCREEN_WIDTH = 64
 SCREEN_HEIGHT = 32
 SCREEN_CHAINED = 1
 ROTATE_SECOND_SCREEN = 1
-FLIP_SECOND_SCREEN = 0
 
 SCREEN_BRIGHTNESS = 80
 
@@ -57,7 +56,7 @@ class ScreenDispatcherNode(Node):
             return
         frame = (np.array(image.data).reshape((SCREEN_HEIGHT, SCREEN_WIDTH, 3)) * (SCREEN_BRIGHTNESS / 100)).astype(np.uint8)
         self.canvas.paste(PIL.Image.fromarray(frame), (0, 0))
-        self.canvas.paste(PIL.Image.fromarray(frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not FLIP_SECOND_SCREEN else 1), :]), (0, SCREEN_HEIGHT))
+        self.canvas.paste(PIL.Image.fromarray(frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not image.flip_second_screen else 1), :]), (0, SCREEN_HEIGHT))
         self.framebuffer[:] = np.asarray(self.canvas)[:,:,::-1]
         self.matrix.show()
 

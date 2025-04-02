@@ -52,6 +52,7 @@ class FaceRendererNode(Node):
         image_msg.height = SCREEN_HEIGHT
         image_msg.width = SCREEN_WIDTH
         image_msg.data = np.array(image).reshape((-1, ))
+        image_msg.flip_second_screen = True
         self.image_pub.publish(image_msg)
 
 def main(args=None):

@@ -65,6 +65,7 @@ class VideoPlayerNode(Node):
         image.sender = 'video_player_node'
         image.height = SCREEN_HEIGHT
         image.width = SCREEN_WIDTH
+        image.flip_second_screen = False
         image.data = (cv2.resize(frame, (SCREEN_WIDTH, SCREEN_HEIGHT))).astype(np.uint8).reshape((-1,)) # Data needs to be reshaped into a 1D array
         self.pub.publish(image) # Send object
 
