@@ -18,7 +18,7 @@ class FacialExpressionDetectorNode(Node):
     def __init__(self):
         super().__init__('facial_expression_detector_node')
         self.detector = dlib.get_frontal_face_detector()
-        self.predictor = dlib.shape_predictor('/home/info/proto-ros2/src/facial_expression_detector_pkg/shape_predictor_68_face_landmarks.dat')
+        self.predictor = dlib.shape_predictor('/home/protopi/proto-ros2/src/facial_expression_detector_pkg/shape_predictor_68_face_landmarks.dat')
         self.cap = cv2.VideoCapture(0)
         self.continuous_frames = 0
         self.expression_pub = self.create_publisher(FacialExpression, 'facial_expression', 10)
