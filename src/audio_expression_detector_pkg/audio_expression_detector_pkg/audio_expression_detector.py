@@ -33,7 +33,7 @@ class AudioExpressionDetectorNode(Node):
         expression.override_time = float(0.125)
         if fragment.amplitude >= 0.8:
             expression.expression = 'open'
-        elif mouth_opened >= 0.5:
+        elif fragment.amplitude >= 0.5:
             expression.expression = 'half-open'
         else:
             expression.expression = 'idle'
