@@ -1,4 +1,5 @@
 import numpy as np
+import time
 import rclpy
 from rclpy.node import Node
 import PIL.Image
@@ -30,6 +31,9 @@ class FaceRendererNode(Node):
             self.get_logger().info('Got screen control permission!')
             self.image_pub = self.create_publisher(Image, 'screen_display', 10)
             self.expression_sub = self.create_subscription(FacialExpression, 'facial_expression', self.expression_sub_cb, 10)
+            self.override_time = 0
+            self.override_part = ''
+            self.override_start = 0
             self.create_timer(1 / FACE_FPS, self.render_face_timer_cb)
         else:
             self.get_logger().info('Failed to get screen control! Exiting...')
@@ -37,8 +41,14 @@ class FaceRendererNode(Node):
     
     def expression_sub_cb(self, expression):
         if expression.type in AVAILABLE_FACE_PARTS:
+            if ((time.time_ns() - self.override_start) <= self.override_time * 1000000000) and expression.type == self.override_part:
+                self.get_logger().info(f'Override part "{expression.type}"!')
             face_parts_state = self.get_parameter('face_parts_state').get_parameter_value().string_array_value
             face_parts_state[AVAILABLE_FACE_PARTS.index(expression.type)] = expression.expression
+            if expression.override_time > 0:
+                self.override_time = expression.override_time
+                self.override_start = time.time_ns()
+                self.override_part = expression.type
         else:
             self.get_logger().info(f'Invalid part name "{expression.type}".')
 
@@ -57,7 +67,7 @@ class FaceRendererNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = FaceRendererNode('/home/protopi/proto-ros2/images/face/')
+    node = FaceRendererNode('$HOME/proto-ros2/images/face/')
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

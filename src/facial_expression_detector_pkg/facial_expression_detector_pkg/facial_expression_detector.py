@@ -18,7 +18,7 @@ class FacialExpressionDetectorNode(Node):
     def __init__(self):
         super().__init__('facial_expression_detector_node')
         self.detector = dlib.get_frontal_face_detector()
-        self.predictor = dlib.shape_predictor('/home/protopi/proto-ros2/src/facial_expression_detector_pkg/shape_predictor_68_face_landmarks.dat')
+        self.predictor = dlib.shape_predictor('$HOME/proto-ros2/src/facial_expression_detector_pkg/shape_predictor_68_face_landmarks.dat')
         self.cap = cv2.VideoCapture(0)
         self.continuous_frames = 0
         self.expression_pub = self.create_publisher(FacialExpression, 'facial_expression', 10)
@@ -44,6 +44,7 @@ class FacialExpressionDetectorNode(Node):
         if self.continuous_frames >= 30:
             expression = FacialExpression()
             expression.type = 'eyes'
+            expression.override_time = float(0)
             if eye_opened >= 0.28:
                 expression.expression = 'idle'
             elif eye_opened >= 0.16:
@@ -55,6 +56,7 @@ class FacialExpressionDetectorNode(Node):
         mouth_opened = length(shape[62], shape[66]) / length(shape[60], shape[64])
         expression = FacialExpression()
         expression.type = 'mouth'
+        expression.override_time = float(0)
         if mouth_opened >= 0.4:
             expression.expression = 'open'
         elif mouth_opened >= 0.135:
