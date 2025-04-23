@@ -30,13 +30,15 @@ class AudioExpressionDetectorNode(Node):
 
         expression = FacialExpression()
         expression.type = 'mouth'
-        expression.override_time = float(0.125)
         if fragment.amplitude >= 0.8:
             expression.expression = 'open'
+            expression.override_time = float(0.125)
         elif fragment.amplitude >= 0.5:
             expression.expression = 'half-open'
+            expression.override_time = float(0.1)
         else:
             expression.expression = 'idle'
+            expression.override_time = float(0)
         self.expression_pub.publish(expression)
 
 def main(args=None):
