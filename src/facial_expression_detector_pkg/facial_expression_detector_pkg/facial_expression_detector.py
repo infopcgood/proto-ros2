@@ -53,17 +53,6 @@ class FacialExpressionDetectorNode(Node):
                 expression.expression = 'closed'
             self.expression_pub.publish(expression)
             self.continuous_frames = 0
-        mouth_opened = length(shape[62], shape[66]) / length(shape[60], shape[64])
-        expression = FacialExpression()
-        expression.type = 'mouth'
-        expression.override_time = float(0)
-        if mouth_opened >= 0.4:
-            expression.expression = 'open'
-        elif mouth_opened >= 0.135:
-            expression.expression = 'half-open'
-        else:
-            expression.expression = 'idle'
-        self.expression_pub.publish(expression)
 
 def main(args=None):
     rclpy.init(args=args)
