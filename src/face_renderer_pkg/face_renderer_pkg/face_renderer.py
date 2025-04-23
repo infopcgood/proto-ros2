@@ -67,7 +67,7 @@ class FaceRendererNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = FaceRendererNode('$HOME/proto-ros2/images/face/')
+    node = FaceRendererNode('/home/protopi/proto-ros2/images/face/')
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
