@@ -16,6 +16,12 @@ class SensorExpressionDetectorNode(Node):
             expression.expression = 'excited'
             expression.override_time = 1.25
             self.expression_pub.publish(expression)
+        elif data.state == 'falling':
+            expression = FacialExpression()
+            expression.type = 'eyes'
+            expression.expression = 'idle'
+            expression.override_time = float(0)
+            self.expression_pub.publish(expression)
 
 def main(args=None):
     rclpy.init(args=args)

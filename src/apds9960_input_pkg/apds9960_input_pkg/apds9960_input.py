@@ -7,7 +7,7 @@ import time
 import adafruit_apds9960.apds9960
 
 READS_PER_SEC = 48
-THRESHOLD = 150
+THRESHOLD = 50
 
 class APDS9960InputNode(Node):
     def __init__(self):
