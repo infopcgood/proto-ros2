@@ -16,6 +16,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FacialExpression.msg"
   "msg/Image.msg"
   "msg/InputAudioFragment.msg"
+  "msg/ProximityLiveData.msg"
+  "msg/ProximityTrigger.msg"
   "srv/ControlRequest.srv"
 )
 
