@@ -13,14 +13,8 @@ class SensorExpressionDetectorNode(Node):
         if data.state == 'rising':
             expression = FacialExpression()
             expression.type = 'eyes'
-            expression.expression = 'excited'
-            expression.override_time = 1.25
-            self.expression_pub.publish(expression)
-        elif data.state == 'falling':
-            expression = FacialExpression()
-            expression.type = 'eyes'
-            expression.expression = 'idle'
-            expression.override_time = float(0)
+            expression.expression = 'blush'
+            expression.override_time = 0.8
             self.expression_pub.publish(expression)
 
 def main(args=None):

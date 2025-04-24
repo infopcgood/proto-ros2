@@ -18,15 +18,11 @@ class AudioExpressionDetectorNode(Node):
                     flag = True
                     break
                 i += 1
-            if flag:
-                expression = FacialExpression()
-                expression.type='eyes'
-                expression.override_time = 0.33
-                expression.expression = 'smile'
-                self.expression_pub.publish(expression)
-                print('hi!')
-            else:
-                print('no.')
+            expression = FacialExpression()
+            expression.type='eyes'
+            expression.override_time = 0.33
+            expression.expression = 'excited' if flag else 'idle'
+            self.expression_pub.publish(expression)
 
         expression = FacialExpression()
         expression.type = 'mouth'
