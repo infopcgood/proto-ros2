@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'apds9960_input_pkg'
+package_name = 'sensor_expression_detector_pkg'
 
 setup(
     name=package_name,
@@ -15,12 +15,12 @@ setup(
     zip_safe=True,
     maintainer='infopcgood',
     maintainer_email='infopcgood@protonmail.com',
-    description='Package to read and broadcast sensor values from APDS9960 sensor.',
+    description='Package to process sensor input data and convert them into facial expressions',
     license='GPL-3.0-only',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'apds9960_input = apds9960_input_pkg.apds9960_input:main'
+            'sensor_expression_detector = sensor_expression_detector_pkg.sensor_expression_detector:main'
         ],
     },
 )
