@@ -32,7 +32,6 @@ class ScreenDispatcherNode(Node):
         self.declare_parameter('dominating_node_name', DOMINATING_NODE_NAME_DEFAULT)
         # LED Matrix initialization
         self.geometry = piomatter.Geometry(width=SCREEN_WIDTH, height=SCREEN_HEIGHT * (SCREEN_CHAINED + 1), n_addr_lines=4, rotation=piomatter.Orientation.Normal)
-        self.canvas = PIL.Image.new('RGB', (SCREEN_WIDTH, SCREEN_HEIGHT * (SCREEN_CHAINED + 1)), (0, 0, 0))
         self.draw = ImageDraw.Draw(self.canvas)
         self.framebuffer = np.asarray(self.canvas) + 0
         self.matrix = piomatter.PioMatter(colorspace=piomatter.Colorspace.RGB888Packed,
@@ -55,9 +54,7 @@ class ScreenDispatcherNode(Node):
         if image.sender != self.get_parameter('dominating_node_name').get_parameter_value().string_value:
             return
         frame = (np.array(image.data).reshape((SCREEN_HEIGHT, SCREEN_WIDTH, 3)) * (SCREEN_BRIGHTNESS / 100)).astype(np.uint8)
-        self.canvas.paste(PIL.Image.fromarray(frame), (0, 0))
-        self.canvas.paste(PIL.Image.fromarray(frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not image.flip_second_screen else 1), :]), (0, SCREEN_HEIGHT))
-        self.framebuffer[:] = np.asarray(self.canvas)[:,:,::-1]
+        self.framebuffer[:] = np.vstack((frame, frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not image.flip_second_screen else 1), :]))
         self.matrix.show()
 
     ## request_sub_cb function
