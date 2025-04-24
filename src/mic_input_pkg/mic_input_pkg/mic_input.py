@@ -31,8 +31,8 @@ class MicInputNode(Node):
         numpy_array = np.frombuffer(in_data, dtype=np.float32)
         mfcc_data = librosa.feature.mfcc(y=numpy_array, sr=48000).reshape((-1, )).astype(np.float32)
 
-        fft = np.fft.fft(numpy_array)[9:24]
-        freqs = np.fft.fftfreq(numpy_array.size, d=1/48000)[9:24]
+        fft = np.fft.fft(numpy_array)[19:48]
+        freqs = np.fft.fftfreq(numpy_array.size, d=1/48000)[19:48]
         frequencies = freqs[np.argsort(np.abs(fft))[::-1]]
 
         # print((frequencies[0]) if np.max(np.abs(numpy_array)) > 0.1 else 0, f'Time: {(time.time_ns() - self.before_time) / 1000000 :.3f} ms, {(time.time_ns() - self.start_time) / 1000000 :.3f} ms')
