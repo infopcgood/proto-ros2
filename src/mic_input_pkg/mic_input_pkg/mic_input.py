@@ -18,21 +18,21 @@ class MicInputNode(Node):
         self.before_time = time.time_ns()
         self.stream = self.pyaudio.open(format=pyaudio.paFloat32,
                       channels=1,
-                      rate=96000,
+                      rate=48000,
                       input=True,
                       output=False,
                       stream_callback=self.mic_cb,
-                      frames_per_buffer=4096)
+                      frames_per_buffer=2048)
 
     def mic_cb(self, in_data, frame_count, time_info, flag):
         if (time.time_ns() - self.before_time) < 5000000:
             return None, pyaudio.paContinue
         
         numpy_array = np.frombuffer(in_data, dtype=np.float32)
-        mfcc_data = librosa.feature.mfcc(y=numpy_array, sr=96000).reshape((-1, )).astype(np.float32)
+        mfcc_data = librosa.feature.mfcc(y=numpy_array, sr=48000).reshape((-1, )).astype(np.float32)
 
-        fft = np.fft.fft(numpy_array)[19:48]
-        freqs = np.fft.fftfreq(numpy_array.size, d=1/96000)[19:48]
+        fft = np.fft.fft(numpy_array)[9:24]
+        freqs = np.fft.fftfreq(numpy_array.size, d=1/48000)[9:24]
         frequencies = freqs[np.argsort(np.abs(fft))[::-1]]
 
         # print((frequencies[0]) if np.max(np.abs(numpy_array)) > 0.1 else 0, f'Time: {(time.time_ns() - self.before_time) / 1000000 :.3f} ms, {(time.time_ns() - self.start_time) / 1000000 :.3f} ms')
