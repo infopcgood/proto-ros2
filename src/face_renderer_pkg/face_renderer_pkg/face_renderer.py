@@ -2,7 +2,7 @@ import numpy as np
 import time
 import rclpy
 from rclpy.node import Node
-import PIL.Image
+import cv2
 
 from interface_pkg.msg import FacialExpression, Image
 from interface_pkg.srv import ControlRequest
@@ -55,14 +55,16 @@ class FaceRendererNode(Node):
 
     def render_face_timer_cb(self):
         face_parts_state = self.get_parameter('face_parts_state').get_parameter_value().string_array_value
-        image = PIL.Image.new('RGB', (SCREEN_WIDTH, SCREEN_HEIGHT), (0, 0, 0))
+        image = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH, 3))
         for face, loc, state in zip(AVAILABLE_FACE_PARTS, FACE_PART_CORNER_LOCATION, face_parts_state):
-            image.paste(PIL.Image.open(self.image_path + face + '/' + state + '.png'), loc)
+            temp_part = cv2.imread(self.image_path + face + '/' + state + '.png')
+            thresh = cv2.threshold(cv2.cvtColor(temp_part, cv2.COLOR_BGR2GRAY), 1, 255, cv2.THRESH_BINARY)
+            image = cv2.bitwise_and(image, image, mask=~thresh) + cv2.bitwise_and(temp_part, temp_part, mask=thresh)
         image_msg = Image()
         image_msg.sender = 'face_renderer_node'
         image_msg.height = SCREEN_HEIGHT
         image_msg.width = SCREEN_WIDTH
-        image_msg.data = np.array(image)[:,:,::-1].reshape((-1, ))
+        image_msg.data = image.reshape((-1, ))
         image_msg.flip_second_screen = True
         self.image_pub.publish(image_msg)
 
