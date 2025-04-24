@@ -41,8 +41,9 @@ class FaceRendererNode(Node):
     
     def expression_sub_cb(self, expression):
         if expression.type in AVAILABLE_FACE_PARTS:
-            if ((time.time_ns() - self.override_start) <= self.override_time * 1000000000) and expression.type == self.override_part:
+            if ((time.time_ns() - self.override_start) <= (self.override_time * 1000000000)) and expression.type == self.override_part:
                 self.get_logger().info(f'Override part "{expression.type}"!')
+                return
             face_parts_state = self.get_parameter('face_parts_state').get_parameter_value().string_array_value
             face_parts_state[AVAILABLE_FACE_PARTS.index(expression.type)] = expression.expression
             if expression.override_time > 0:
