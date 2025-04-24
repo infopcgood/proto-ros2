@@ -17,7 +17,7 @@ class APDS9960InputNode(Node):
         self.proximity_live_pub = self.create_publisher(ProximityLiveData, 'proximity_live_data', 10)
         self.proximity_trigger_pub = self.create_publisher(ProximityTrigger, 'proximity_trigger', 10)
         self.previous_proximity = 255
-        self.create_timer(1 // READS_PER_SEC, self.read_cb)
+        self.create_timer(1 / READS_PER_SEC, self.read_cb)
         self.sensor.enable_proximity = True
     
     def read_cb(self):
