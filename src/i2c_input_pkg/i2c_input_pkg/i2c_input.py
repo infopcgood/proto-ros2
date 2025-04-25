@@ -27,6 +27,5 @@ def main(args=None):
     except KeyboardInterrupt:
         node.get_logger().info('KeyboardInterrupt detected, halting...')
     finally:
-        node.cap.release()
         node.destroy_node()
         rclpy.shutdown()
