@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'i2c_input = i2c_input_pkg.i2c_input:main'
         ],
     },
 )
