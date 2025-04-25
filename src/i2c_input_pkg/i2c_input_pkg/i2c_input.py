@@ -15,7 +15,7 @@ class I2CInputNode(Node):
     
     def data_cb(self):
         data = GyroAccelLiveData()
-        data.gx, data.gy, data.gz, data.ax, data.ay, data.az = self.sensor.getMotion6()
+        data.gx, data.gy, data.gz, data.ax, data.ay, data.az = map(float, self.sensor.getMotion6())
         self.data_pub.publish(data)
         self.get_logger().log(f'{data.gx, data.gy, data.gz, data.ax, data.ay, data.az}')
 
