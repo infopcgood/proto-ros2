@@ -55,11 +55,13 @@ class FaceRendererNode(Node):
 
     def render_face_timer_cb(self):
         face_parts_state = self.get_parameter('face_parts_state').get_parameter_value().string_array_value
-        image = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH, 3))
+        image = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH, 3)).astype(np.uint8)
         for face, loc, state in zip(AVAILABLE_FACE_PARTS, FACE_PART_CORNER_LOCATION, face_parts_state):
             temp_part = cv2.imread(self.image_path + face + '/' + state + '.png')
-            ret, thresh = cv2.threshold(cv2.cvtColor(temp_part, cv2.COLOR_BGR2GRAY), 1, 255, cv2.THRESH_BINARY)
-            image = cv2.bitwise_and(image, image, mask=~thresh) + cv2.bitwise_and(temp_part, temp_part, mask=thresh)
+            temp_part_expanded = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH, 3)).astype(np.uint8)
+            temp_part_expanded[loc[1]:loc[1]+temp_part.shape[0],loc[0]:loc[0]+temp_part.shape[1],:] = temp_part.copy()
+            ret, thresh = cv2.threshold(cv2.cvtColor(temp_part_expanded, cv2.COLOR_BGR2GRAY), 1, 255, cv2.THRESH_BINARY)
+            image = cv2.bitwise_and(image, image, mask=~thresh) + cv2.bitwise_and(temp_part_expanded, temp_part_expanded, mask=thresh)
         image_msg = Image()
         image_msg.sender = 'face_renderer_node'
         image_msg.height = SCREEN_HEIGHT

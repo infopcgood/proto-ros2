@@ -1,6 +1,5 @@
 import numpy as np
-import PIL
-from PIL import ImageDraw
+import cv2
 import adafruit_blinka_raspberry_pi5_piomatter as piomatter
 
 import rclpy
@@ -32,8 +31,7 @@ class ScreenDispatcherNode(Node):
         self.declare_parameter('dominating_node_name', DOMINATING_NODE_NAME_DEFAULT)
         # LED Matrix initialization
         self.geometry = piomatter.Geometry(width=SCREEN_WIDTH, height=SCREEN_HEIGHT * (SCREEN_CHAINED + 1), n_addr_lines=4, rotation=piomatter.Orientation.Normal)
-        self.draw = ImageDraw.Draw(self.canvas)
-        self.framebuffer = np.asarray(self.canvas) + 0
+        self.framebuffer = np.zeros((SCREEN_HEIGHT * (SCREEN_CHAINED + 1), SCREEN_WIDTH, 3)).astype(np.uint8)
         self.matrix = piomatter.PioMatter(colorspace=piomatter.Colorspace.RGB888Packed,
                              pinout=piomatter.Pinout.AdafruitMatrixBonnet,
                              framebuffer=self.framebuffer,
@@ -53,7 +51,7 @@ class ScreenDispatcherNode(Node):
             return
         if image.sender != self.get_parameter('dominating_node_name').get_parameter_value().string_value:
             return
-        frame = (np.array(image.data).reshape((SCREEN_HEIGHT, SCREEN_WIDTH, 3)) * (SCREEN_BRIGHTNESS / 100)).astype(np.uint8)
+        frame = (np.array(image.data).reshape((SCREEN_HEIGHT, SCREEN_WIDTH, 3)) * (SCREEN_BRIGHTNESS / 100)).astype(np.uint8)[:,:,[2, 0, 1]]
         self.framebuffer[:] = np.vstack((frame, frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not image.flip_second_screen else 1), :]))
         self.matrix.show()
 
