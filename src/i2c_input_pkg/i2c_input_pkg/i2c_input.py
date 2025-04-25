@@ -17,7 +17,7 @@ class I2CInputNode(Node):
         data = GyroAccelLiveData()
         data.gx, data.gy, data.gz, data.ax, data.ay, data.az = map(float, self.sensor.getMotion6())
         self.data_pub.publish(data)
-        self.get_logger().log(f'{data.gx, data.gy, data.gz, data.ax, data.ay, data.az}')
+        self.get_logger().info(f'{data.gx, data.gy, data.gz, data.ax, data.ay, data.az}')
 
 def main(args=None):
     rclpy.init(args=args)
