@@ -9,7 +9,7 @@ from tensorflow import keras
 
 from interface_pkg.msg import InputAudioFragment, FacialExpression
 
-VOWELS_STR = "AUH, OOUU, IEEU, AEE, UNGM, NL, X"
+VOWELS_STR = "AUH, OOUU, IEEU, AEE, UNGM, NL, idle"
 VOWELS_LIST = VOWELS_STR.split(', ')
 
 class AudioExpressionDetectorNode(Node):
@@ -24,7 +24,7 @@ class AudioExpressionDetectorNode(Node):
         expression = FacialExpression()
         expression.type = 'mouth'
         if fragment.amplitude < 0.1:
-            expression.expression = 'idle.png'
+            expression.expression = 'idle'
         else:
             mfcc_data = fragment.mfcc[1:].reshape((1, 19))
             preds = np.argmax(self.model.predict(mfcc_data, verbose=0))
