@@ -26,7 +26,7 @@ class AudioExpressionDetectorNode(Node):
         if fragment.amplitude < 0.1:
             expression.expression = 'idle'
         else:
-            mfcc_data = fragment.mfcc[1:].reshape((1, 19))
+            mfcc_data = np.array(fragment.mfcc)[1:].reshape((1, 19))
             preds = np.argmax(self.model.predict(mfcc_data, verbose=0))
             if len(self.buffer) < 5:
                 self.buffer += [preds]
