@@ -29,7 +29,7 @@ class MicInputNode(Node):
         
         numpy_array = np.frombuffer(in_data, dtype=np.float32)
         mfcc_data = librosa.feature.mfcc(y=numpy_array, sr=48000)
-        mfcc_data = mfcc_data.mean(axis=0).astype(np.float32)
+        mfcc_data = mfcc_data.mean(axis=1).astype(np.float32)
 
         fft = np.fft.fft(numpy_array)[12:48]
         freqs = np.fft.fftfreq(numpy_array.size, d=1/48000)[12:48]
