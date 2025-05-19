@@ -24,7 +24,7 @@ class AudioExpressionDetectorNode(Node):
     def mic_input_cb(self, fragment):
         expression = FacialExpression()
         expression.type = 'mouth'
-        if fragment.amplitude < 0.1:
+        if fragment.amplitude < 0.02:
             expression.expression = 'idle'
         else:
             mfcc_data = np.array(fragment.mfcc)[1:].reshape((1, 19))
