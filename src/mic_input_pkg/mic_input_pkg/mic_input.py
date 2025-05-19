@@ -3,7 +3,6 @@ import math
 import time
 import librosa
 import pyaudio
-
 import rclpy
 from rclpy.node import Node
 
@@ -29,7 +28,8 @@ class MicInputNode(Node):
             return None, pyaudio.paContinue
         
         numpy_array = np.frombuffer(in_data, dtype=np.float32)
-        mfcc_data = librosa.feature.mfcc(y=numpy_array, sr=48000).reshape((-1, )).astype(np.float32)
+        mfcc_data = librosa.feature.mfcc(y=numpy_array, sr=48000)
+        mfcc_data = mfcc_data.mean(axis=0).astype(np.float32)
 
         fft = np.fft.fft(numpy_array)[12:48]
         freqs = np.fft.fftfreq(numpy_array.size, d=1/48000)[12:48]
@@ -46,7 +46,6 @@ class MicInputNode(Node):
 
         fragment.frequency_amp = np.sort(np.abs(fft))[::-1].astype(np.float32)
         fragment.frequency_hz = frequencies.astype(np.float32)
-        fragment.phoneme = ''
 
         self.mic_pub.publish(fragment)
 

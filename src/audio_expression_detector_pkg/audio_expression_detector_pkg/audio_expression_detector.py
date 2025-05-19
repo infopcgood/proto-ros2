@@ -1,40 +1,39 @@
 import rclpy
 from rclpy.node import Node
 
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import librosa
+from tensorflow import keras
+
 from interface_pkg.msg import InputAudioFragment, FacialExpression
+
+VOWELS_STR = "AUH, OOUU, IEEU, AEE, UNGM, NL, X"
+VOWELS_LIST = VOWELS_STR.split(', ')
 
 class AudioExpressionDetectorNode(Node):
     def __init__(self):
         super().__init__('audio_expression_detector_node')
         self.create_subscription(InputAudioFragment, 'mic_input', self.mic_input_cb, 10)
+        self.model = tf.keras.models.load_model('/home/protopi/proto-ros2/src/audio_expression_detector_pkg/SoundTrainer_E50.keras')
         self.expression_pub = self.create_publisher(FacialExpression, 'facial_expression', 10)
+        self.buffer = []
     
     def mic_input_cb(self, fragment):
-        if fragment.amplitude >= 0.125:
-            flag = False
-            i = 0
-            while i < 10 and fragment.frequency_amp[i] >= fragment.frequency_amp[0] * 0.8:
-                if fragment.frequency_hz[i] >= 900:
-                    flag = True
-                    break
-                i += 1
-            expression = FacialExpression()
-            expression.type='eyes'
-            expression.override_time = 0.33
-            expression.expression = 'excited' if flag else 'idle'
-            self.expression_pub.publish(expression)
-
         expression = FacialExpression()
         expression.type = 'mouth'
-        if fragment.amplitude >= 0.1:
-            expression.expression = 'open'
-            expression.override_time = float(0.125)
-        elif fragment.amplitude >= 0.05:
-            expression.expression = 'half-open'
-            expression.override_time = float(0.1)
+        if fragment.amplitude < 0.1:
+            expression.expression = 'idle.png'
         else:
-            expression.expression = 'idle'
-            expression.override_time = float(0)
+            mfcc_data = fragment.mfcc[1:].reshape((1, 19))
+            preds = np.argmax(self.model.predict(mfcc_data, verbose=0))
+            if len(self.buffer) < 5:
+                self.buffer += [preds]
+            else:
+                self.buffer = self.buffer[1:] + [preds]
+            pred = stats.mode(self.buffer)
+            expression.expression = VOWELS_LIST[pred.mode]
         self.expression_pub.publish(expression)
 
 def main(args=None):
