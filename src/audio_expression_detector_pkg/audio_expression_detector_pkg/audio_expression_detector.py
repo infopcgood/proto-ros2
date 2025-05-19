@@ -6,6 +6,7 @@ import pandas as pd
 import tensorflow as tf
 import librosa
 from tensorflow import keras
+from scipy import stats
 
 from interface_pkg.msg import InputAudioFragment, FacialExpression
 
