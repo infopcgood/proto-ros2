@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source /home/$USER/.bashrc
-source /home/$USER/venvs/blinka_venv/bin/activate
+source /home/$USER/blinka_venv/bin/activate
 source /home/$USER/ros2_jazzy/install/setup.bash
 source /home/$USER/proto-ros2/install/setup.bash
 
