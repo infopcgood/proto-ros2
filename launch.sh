@@ -11,7 +11,3 @@ ros2 run face_renderer_pkg face_renderer &
 echo "Face Renderer Started!" &
 ros2 run mic_input_pkg mic_input &
 echo "Mic Input Started!" &
-ros2 run facial_expression_detector_pkg facial_expression_detector &
-echo "Face Detector Started!" &
-echo "Audio Detector Started!" &
-ros2 run audio_expression_detector_pkg audio_expression_detector
