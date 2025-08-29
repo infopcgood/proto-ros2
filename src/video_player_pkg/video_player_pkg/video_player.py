@@ -30,7 +30,7 @@ class VideoPlayerNode(Node):
         self.cap = cv2.VideoCapture(filename)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         # Make publisher and load audio
-        self.pub = self.create_publisher(Image, 'screen_display', 10)
+        self.pub = self.create_publisher(Image, 'request_screen_display', 10)
         self.audio = AudioSegment.from_file(filename, filename.strip().split('.')[-1])
         # Ask for screen control and play video/audio
         request_cli = self.create_client(ControlRequest, 'request_screen_control')
