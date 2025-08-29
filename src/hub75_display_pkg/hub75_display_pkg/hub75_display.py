@@ -39,3 +39,15 @@ class HUB75Display(Node):
         frame = (np.array(image.data).reshape((SCREEN_HEIGHT, SCREEN_WIDTH, 3)) * (SCREEN_BRIGHTNESS / 100)).astype(np.uint8)[:,:,[2, 0, 1]]
         self.framebuffer[:] = np.vstack((frame, frame[::(-1 if ROTATE_SECOND_SCREEN else 0), ::(-1 if ROTATE_SECOND_SCREEN and not image.flip_second_screen else 1), :]))
         self.matrix.show()
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = HUB75Display()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info('KeyboardInterrupt detected, halting...')
+    finally:
+        node.stream.close()
+        node.destroy_node()
+        rclpy.shutdown()
