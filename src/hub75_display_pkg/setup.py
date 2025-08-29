@@ -13,13 +13,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='info',
-    maintainer_email='112328126+infopcgood@users.noreply.github.com',
+    maintainer='infopcgood',
+    maintainer_email='infopcgood@protonmail.com',
     description='TODO: Package description',
     license='GPL-3.0-only',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'hub75_display = hub75_display_pkg.hub75_display:main'
         ],
     },
 )
