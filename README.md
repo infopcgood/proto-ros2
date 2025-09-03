@@ -5,8 +5,9 @@ Open source software to control various protogen fursuit heads on top of ROS2 / 
 This software assumes the following hardware setup:
 - Raspberry Pi 5
 - Adafruit RGB Matrix Bonnet
-- 2 64x32 HUB75 LED Matrices daisy-chaine
+- 2 64x32 HUB75 LED Matrices daisy-chained
 - A camera module or a webcam
+- A microphone
 - A speaker (optional)
 
 Consult [this page](https://learn.adafruit.com/rgb-matrix-panels-with-raspberry-pi-5/wiring) for wiring instructions.
@@ -50,11 +51,26 @@ pip install dlib
 ```
 
 ## Installation
-Clone this repository into a directory of your choice, and compile it using `colcon build`.
+Clone this repository into `$HOME/proto-ros2`, and compile it using `colcon build`.
 ```bash
+cd ~
 git clone https://github.com/infopcgood/proto-ros2
+cd proto-ros2
 colcon build
 ```
 After building, add `source (repository_directory)/install/local_setup.bash` to your `.bashrc`. Exit and reopen the shell.
 
 Finally, use a method of your choice(`crontab`, `systemd`, etc...) to start `launch.sh` on startup.
+
+If you would like to use OpenSeeFace based lipsync features, you need to install [OpenSeeFace](https://github.com/emilianavt/OpenSeeFace) and [proto-utils](https://github.com/infopcgood/proto-utils). Clone them to your home directory.
+```bash
+cd ~
+git clone https://github.com/emilianavt/OpenSeeFace
+git clone https://github.com/infopcgood/proto-utils
+```
+
+## Hardware Setup
+TODO
+
+## License
+All packages under this repository is distributed via the GPL-3.0 license.
