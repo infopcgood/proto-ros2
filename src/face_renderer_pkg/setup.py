@@ -16,7 +16,7 @@ setup(
     maintainer='infopcgood',
     maintainer_email='infopcgood@protonmail.com',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='GPL-3.0-only',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
