@@ -23,8 +23,9 @@ Consult [this page](https://learn.adafruit.com/rgb-matrix-panels-with-raspberry-
 First, flash the operating system image onto the microSD card/eMMC according to the **Library Compatibility Table** shown below. When the OS installation is finished, you may create a 'systemwide venv' and add it to `~/.bashrc` or use systemwide Python packages.
 
 Next, download and compile ROS2 from source. The following script is a modified version of [this guide](https://forums.raspberrypi.com/viewtopic.php?t=361746). You can change `jazzy` to a ROS2 distribution of your liking, though I could not ensure backwards compatibility for older distributions.
+(*Currently the dependencies aren't optimized and is rather heavy. There will be a more 'thinned down' version of this script in the future.*)
 ```bash
-sudo apt install -y git colcon python3-rosdep2 vcstool wget python3-flake8-docstrings python3-pip python3-pytest-cov python3-flake8-blind-except python3-flake8-builtins python3-flake8-class-newline python3-flake8-comprehensions python3-flake8-deprecated python3-flake8-import-order python3-flake8-quotes python3-pytest-repeat python3-pytest-rerunfailures python3-vcstools libx11-dev libxrandr-dev libasio-dev libtinyxml2-dev python3-lark
+sudo apt install -y git colcon python3-rosdep2 vcstool wget python3-flake8-docstrings python3-pip python3-pytest-cov python3-flake8-blind-except python3-flake8-builtins python3-flake8-class-newline python3-flake8-comprehensions python3-flake8-deprecated python3-flake8-import-order python3-flake8-quotes python3-pytest-repeat python3-pytest-rerunfailures python3-vcstools libx11-dev libxrandr-dev libasio-dev libtinyxml2-dev python3-lark libbullet-dev
 
 mkdir -p ~/ros2_jazzy/src
 cd ~/ros2_jazzy
