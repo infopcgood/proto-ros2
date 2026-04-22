@@ -5,11 +5,11 @@ from rclpy.node import Node
 import cv2
 import getpass
 
+from rcl_interfaces.srv import GetParameters
+
 from interface_pkg.msg import FacialExpression, Image
 from interface_pkg.srv import ControlRequest
 
-SCREEN_WIDTH = 64
-SCREEN_HEIGHT = 32
 FACE_FPS = 24
 
 AVAILABLE_FACE_PARTS = ['mouth', 'eyes']
@@ -18,8 +18,19 @@ FACE_PART_CORNER_LOCATION = [(16, 16), (0, 0)]
 class FaceRendererNode(Node):
     def __init__(self, image_path):
         super().__init__('face_renderer_node')
+        # Load settings
+        self.param_cli = self.create_client(GetParameters, '/param_server_node/get_parameters')
+        while not self.param_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for parameter service...')
+        get_params = GetParameters.Request()
+        get_params.names = ['DISPLAY_WIDTH', 'DISPLAY_HEIGHT']
+        param_future = self.param_cli.call_async(get_params)
+        rclpy.spin_until_future_complete(self, param_future)
+        self.DISPLAY_WIDTH, self.DISPLAY_HEIGHT = param_future.result().values[0].integer_value, param_future.result().values[1].integer_value
+        
         self.image_path = image_path
         self.declare_parameter('face_parts_state', ['idle'] * len(AVAILABLE_FACE_PARTS))
+
         # Ask for screen control
         request_cli = self.create_client(ControlRequest, 'request_screen_control')
         request = ControlRequest.Request()
@@ -56,17 +67,17 @@ class FaceRendererNode(Node):
 
     def render_face_timer_cb(self):
         face_parts_state = self.get_parameter('face_parts_state').get_parameter_value().string_array_value
-        image = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH, 3)).astype(np.uint8)
+        image = np.zeros((self.DISPLAY_HEIGHT, self.DISPLAY_WIDTH, 3)).astype(np.uint8)
         for face, loc, state in zip(AVAILABLE_FACE_PARTS, FACE_PART_CORNER_LOCATION, face_parts_state):
             temp_part = cv2.imread(self.image_path + face + '/' + state + '.png')
-            temp_part_expanded = np.zeros((SCREEN_HEIGHT, SCREEN_WIDTH, 3)).astype(np.uint8)
+            temp_part_expanded = np.zeros((self.DISPLAY_HEIGHT, self.DISPLAY_WIDTH, 3)).astype(np.uint8)
             temp_part_expanded[loc[1]:loc[1]+temp_part.shape[0],loc[0]:loc[0]+temp_part.shape[1],:] = temp_part.copy()
             ret, thresh = cv2.threshold(cv2.cvtColor(temp_part_expanded, cv2.COLOR_BGR2GRAY), 1, 255, cv2.THRESH_BINARY)
             image = cv2.bitwise_and(image, image, mask=~thresh) + cv2.bitwise_and(temp_part_expanded, temp_part_expanded, mask=thresh)
         image_msg = Image()
         image_msg.sender = 'face_renderer_node'
-        image_msg.height = SCREEN_HEIGHT
-        image_msg.width = SCREEN_WIDTH
+        image_msg.height = self.DISPLAY_HEIGHT
+        image_msg.width = self.DISPLAY_WIDTH
         image_msg.data = image.reshape((-1, ))
         image_msg.flip_second_screen = True
         self.image_pub.publish(image_msg)
