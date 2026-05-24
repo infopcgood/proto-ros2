@@ -13,7 +13,7 @@ from interface_pkg.srv import ControlRequest
 
 NUM_LEDS = 150
 NUM_STRIPS = 8
-BRIGHTNESS = 5
+BRIGHTNESS = 3
 
 class ProtoPanelDisplay(Node):
     def __init__(self):
