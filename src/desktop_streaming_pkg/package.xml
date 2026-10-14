@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>desktop_streaming_pkg</name>
+  <version>0.0.0</version>
+  <description>Stream desktop captures to the proto-ros2 screen dispatcher.</description>
+  <maintainer email="infopcgood@protonmail.com">infopcgood</maintainer>
+  <license>GPL-3.0-only</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>interface_pkg</exec_depend>
+  <exec_depend>python3-mss-pip</exec_depend>
+  <exec_depend>python3-pil</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

@@ -75,5 +75,17 @@ git clone https://github.com/infopcgood/proto-utils
 ## Hardware Setup
 TODO
 
+## Desktop streaming
+
+`desktop_streaming_pkg` captures a computer's desktop and sends resized frames
+through the screen dispatcher to any existing display backend. Run it on the
+desktop computer, with the receiver nodes on the same machine or a Raspberry Pi
+on the ROS 2 network. Monitor selection, frame rate, and aspect-ratio preservation
+are configurable. Wayland uses the system screen-sharing portal and PipeWire;
+X11, Windows, and macOS use MSS. Wayland requires additional system packages.
+
+See [desktop streaming setup and usage](src/desktop_streaming_pkg/README.md)
+for dependencies, build instructions, receiver startup, and parameters.
+
 ## License
 All packages under this repository is distributed via the GPL-3.0 license.
