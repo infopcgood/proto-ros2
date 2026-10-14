@@ -85,6 +85,7 @@ class PortalTests(unittest.TestCase):
         self.response_result = {'session_handle': '/session/test'}
         self.emit_response = True
         self.alternate_path = False
+        self.introspection = f'<node><interface name="{portal.SCREENCAST}"/></node>'
         self.capture.bus.call_sync.side_effect = self.call
 
     def subscribe(self, *args):
@@ -92,6 +93,8 @@ class PortalTests(unittest.TestCase):
         return len(self.callbacks)
 
     def call(self, *args):
+        if args[3] == 'Introspect':
+            return Variant('(s)', (self.introspection,))
         if args[3] == 'Close':
             return Variant('()', ())
         options = args[4].unpack()[-1]
@@ -202,6 +205,36 @@ class PortalTests(unittest.TestCase):
                          ('/session/approved', portal.SESSION, 'Close'))
         context.pop_thread_default.assert_called_once()
         self.assertIsNone(self.capture.bus)
+
+    def test_missing_screencast_fails_before_session_creation(self):
+        self.introspection = '<node><interface name="org.freedesktop.portal.Settings"/></node>'
+        gio, glib, gst = self.capture.Gio, self.capture.GLib, Mock()
+        context = Mock()
+        glib.MainContext = SimpleNamespace(new=lambda: context)
+        gio.BusType = SimpleNamespace(SESSION=0)
+        bus = self.capture.bus
+        gio.bus_get_sync = Mock(return_value=bus)
+        self.capture._request = Mock()
+        with patch.object(portal, 'load_runtime', return_value=(gio, glib, gst, Mock())):
+            with patch.dict(os.environ, {'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME'}):
+                with self.assertRaisesRegex(RuntimeError, 'does not expose') as error:
+                    self.capture.start()
+        self.assertIn('ubuntu:GNOME', str(error.exception))
+        self.assertIn('xdg-desktop-portal-gnome', str(error.exception))
+        self.capture._request.assert_not_called()
+        bus.call_with_unix_fd_list_sync.assert_not_called()
+        bus.signal_subscribe.assert_not_called()
+        self.assertEqual(bus.call_sync.call_count, 1)
+        self.assertIsNone(self.capture.session)
+        self.assertIsNone(self.capture.bus)
+        context.pop_thread_default.assert_called_once()
+
+    def test_introspection_transport_error_is_preserved(self):
+        error = RuntimeError('Session bus disconnected')
+        self.capture.bus.call_sync.side_effect = error
+        with self.assertRaises(RuntimeError) as raised:
+            self.capture._require_screencast()
+        self.assertIs(raised.exception, error)
 
     def test_sample_layout_is_copied_before_unmapping(self):
         gst = SimpleNamespace(

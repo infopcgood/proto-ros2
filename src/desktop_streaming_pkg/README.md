@@ -111,6 +111,31 @@ KDE uses `xdg-desktop-portal-kde`, and wlroots desktops need their corresponding
 backend. Use the backend appropriate to your desktop; installing the generic
 portal service alone does not supply screen capture.
 
+Check the desktop from a terminal inside the graphical session:
+
+```bash
+echo "$XDG_CURRENT_DESKTOP"
+echo "$XDG_SESSION_TYPE"
+```
+
+Install the backend matching that desktop, then log out and back in:
+
+| Desktop | Ubuntu/Debian package |
+| --- | --- |
+| GNOME / Ubuntu GNOME (`GNOME` or `ubuntu:GNOME`) | `xdg-desktop-portal-gnome` |
+| KDE Plasma (`KDE`) | `xdg-desktop-portal-kde` |
+| Sway (`sway`) | `xdg-desktop-portal-wlr` |
+
+For example, **only on GNOME**:
+
+```bash
+sudo apt install xdg-desktop-portal-gnome
+```
+
+Other compositors may need different backends. Use their documented portal
+integration; do not set `XDG_CURRENT_DESKTOP` to a different desktop to force a
+backend that your compositor cannot support.
+
 If using a virtual environment, it must use a system-compatible Python and expose
 system site packages to import `gi`. For a new environment, create it with
 `/usr/bin/python3 -m venv --system-site-packages <venv-path>`, then activate it,
@@ -136,6 +161,43 @@ This follows the [XDG ScreenCast portal API](https://flatpak.github.io/xdg-deskt
 Missing session services, unsupported compositor capture, or incompatible video
 buffer negotiation can still prevent capture. A real Wayland session and ROS 2
 transport have not been smoke-tested in the development environment.
+
+### Missing ScreenCast interface
+
+`No such interface org.freedesktop.portal.ScreenCast` means the portal service
+is reachable but does not expose screen sharing. Its ScreenCast backend may be
+missing, failing to start, or excluded by portal configuration. The node checks
+for this interface before creating a sharing session and reports setup guidance.
+Rebuilding with colcon does not install or configure desktop portal services.
+
+After installing the matching backend and logging back in, verify the interface
+from a terminal in the desktop session:
+
+```bash
+busctl --user introspect org.freedesktop.portal.Desktop \
+  /org/freedesktop/portal/desktop org.freedesktop.portal.ScreenCast
+```
+
+This should list ScreenCast methods such as `CreateSession`, `SelectSources`,
+and `Start`. If it still fails, inspect the portal and backend user-service logs.
+For GNOME on a systemd-based distribution:
+
+```bash
+journalctl --user -b -u xdg-desktop-portal.service \
+  -u xdg-desktop-portal-gnome.service --no-pager -n 80
+```
+
+Use your backend's service name for other desktops. Check any custom
+`~/.config/xdg-desktop-portal/portals.conf` or desktop-specific configuration:
+it can override the distribution's backend selection. See the upstream
+[portal configuration reference](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html).
+
+In manually assembled desktop sessions, the D-Bus activation environment must
+also receive the actual `WAYLAND_DISPLAY` and `XDG_CURRENT_DESKTOP` values.
+Follow your compositor's startup instructions and the upstream
+[system integration guide](https://flatpak.github.io/xdg-desktop-portal/docs/system-integration.html).
+GNOME and KDE normally arrange this automatically. Run the capture node as the
+logged-in desktop user, without `sudo`.
 
 ## Parameters
 
@@ -172,7 +234,8 @@ ros2 service call /request_screen_control interface_pkg/srv/ControlRequest \
 The frame tests use real Pillow conversions. Node and portal contract tests
 replace ROS, D-Bus, and GStreamer APIs with test doubles, so they can run without
 ROS, a desktop, or LED hardware. They cover backend selection, portal cancellation
-and timeouts, frame strides, static frames, session revocation, and cleanup.
+and timeouts, a missing ScreenCast interface, frame strides, static frames,
+session revocation, and cleanup.
 They do not validate DDS transport or native desktop capture.
 
 ```bash

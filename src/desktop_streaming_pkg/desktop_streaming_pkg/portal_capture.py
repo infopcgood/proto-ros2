@@ -5,6 +5,7 @@ import sys
 import time
 from types import SimpleNamespace
 import uuid
+from xml.etree import ElementTree
 
 
 BUS_NAME = 'org.freedesktop.portal.Desktop'
@@ -92,6 +93,7 @@ class PortalCapture:
         self.context.push_thread_default()
         try:
             self.bus = self.Gio.bus_get_sync(self.Gio.BusType.SESSION, None)
+            self._require_screencast()
             sender = self.bus.get_unique_name()[1:].replace('.', '_')
             token = 'desktop_' + uuid.uuid4().hex
             # Predict the session path so even an interrupted create can close it.
@@ -132,6 +134,29 @@ class PortalCapture:
             raise
         finally:
             self.context.pop_thread_default()
+
+    def _require_screencast(self):
+        """Explain an unavailable desktop backend before creating a session."""
+        reply = self.bus.call_sync(
+            BUS_NAME, OBJECT_PATH, 'org.freedesktop.DBus.Introspectable',
+            'Introspect', None, self.GLib.VariantType.new('(s)'),
+            self.Gio.DBusCallFlags.NONE, 10000, None,
+        )
+        interfaces = ElementTree.fromstring(reply.unpack()[0]).findall('interface')
+        if not any(interface.get('name') == SCREENCAST for interface in interfaces):
+            desktop = os.environ.get('XDG_CURRENT_DESKTOP') or 'unset'
+            raise RuntimeError(
+                f'The desktop portal does not expose {SCREENCAST} '
+                f'(XDG_CURRENT_DESKTOP={desktop!r}). Install and enable the '
+                'ScreenCast backend for your actual desktop: '
+                'xdg-desktop-portal-gnome for GNOME, xdg-desktop-portal-kde '
+                'for KDE Plasma, or xdg-desktop-portal-wlr for Sway. '
+                'The generic xdg-desktop-portal package alone is insufficient. '
+                'If the backend is installed, check its user service logs and '
+                'portals.conf selection. Log out and back in after setup, then '
+                'run from a terminal inside the graphical desktop session. '
+                'See the package README troubleshooting instructions.'
+            )
 
     def _request(self, method, signature='(a{sv})', args=(), options=None):
         """Subscribe before making a portal call, then await its Response signal."""
