@@ -81,7 +81,8 @@ TODO
 through the screen dispatcher to any existing display backend. Run it on the
 desktop computer, with the receiver nodes on the same machine or a Raspberry Pi
 on the ROS 2 network. Monitor selection, frame rate, and aspect-ratio preservation
-are configurable. Linux capture requires an X11 session.
+are configurable. Wayland uses the system screen-sharing portal and PipeWire;
+X11, Windows, and macOS use MSS. Wayland requires additional system packages.
 
 See [desktop streaming setup and usage](src/desktop_streaming_pkg/README.md)
 for dependencies, build instructions, receiver startup, and parameters.

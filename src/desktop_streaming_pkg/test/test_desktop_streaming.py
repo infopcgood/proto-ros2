@@ -25,7 +25,7 @@ class DesktopStreamingTests(unittest.TestCase):
             'ScreenShotError', (Exception,), {},
         )
         self.ros = modules['rclpy']
-        for name in ['init', 'spin', 'spin_until_future_complete', 'try_shutdown']:
+        for name in ['init', 'spin', 'spin_until_future_complete', 'try_shutdown', 'ok']:
             setattr(self.ros, name, Mock())
         modules['rclpy.executors'].ExternalShutdownException = type(
             'ExternalShutdownException', (Exception,), {},
@@ -73,7 +73,9 @@ class DesktopStreamingTests(unittest.TestCase):
         ])
         self.control = SimpleNamespace(success=True, message='')
         self.node.call_service = Mock(side_effect=[self.dimensions, self.control])
-        session = patch.dict('os.environ', {'XDG_SESSION_TYPE': 'x11'})
+        session = patch.dict('os.environ', {
+            'XDG_SESSION_TYPE': 'x11', 'WAYLAND_DISPLAY': '',
+        })
         session.start()
         self.addCleanup(session.stop)
 
@@ -103,7 +105,7 @@ class DesktopStreamingTests(unittest.TestCase):
         self.capture.grab.assert_called_once_with(self.capture.monitors[0])
 
     def test_invalid_rates_and_timeouts_fail_before_services(self):
-        for name in ['fps', 'service_timeout']:
+        for name in ['fps', 'service_timeout', 'portal_timeout']:
             for value in [0.0, -1.0, float('nan'), float('inf')]:
                 with self.subTest(name=name, value=value):
                     self.overrides = {name: value}
@@ -131,6 +133,34 @@ class DesktopStreamingTests(unittest.TestCase):
             self.node.start()
         self.assertEqual(self.node.call_service.call_count, 1)
         self.node.create_timer.assert_not_called()
+
+    def test_wayland_uses_portal_before_requesting_control(self):
+        with patch.dict('os.environ', {'XDG_SESSION_TYPE': 'wayland'}):
+            with patch.object(self.module, 'PortalCapture') as factory:
+                capture = factory.return_value
+                capture.grab.return_value = self.capture.grab.return_value
+                self.node.start()
+                factory.assert_called_once_with(
+                    timeout=120.0, frame_timeout=10.0, is_running=self.ros.ok,
+                )
+                capture.start.assert_called_once()
+                self.module.mss.MSS.assert_not_called()
+                self.node.publish_frame()
+                message = self.node.publisher.publish.call_args.args[0]
+                self.assertEqual(bytes(message.data), bytes([0, 0, 255]) * 2)
+                self.node.close()
+                capture.close.assert_called_once()
+
+    def test_portal_cancellation_does_not_take_control(self):
+        self.overrides['backend'] = 'portal'
+        with patch.object(self.module, 'PortalCapture') as factory:
+            factory.return_value.start.side_effect = RuntimeError('cancelled')
+            with self.assertRaisesRegex(RuntimeError, 'cancelled'):
+                self.node.start()
+            self.assertEqual(self.node.call_service.call_count, 1)
+            self.node.create_timer.assert_not_called()
+            self.node.close()
+            factory.return_value.close.assert_called_once()
 
     def test_control_denial_does_not_start_timer(self):
         self.control.success = False

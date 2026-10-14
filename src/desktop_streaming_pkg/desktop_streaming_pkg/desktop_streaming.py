@@ -2,8 +2,6 @@
 
 from array import array
 import math
-import os
-import sys
 
 import mss
 from mss.exception import ScreenShotError
@@ -17,6 +15,7 @@ from interface_pkg.msg import Image
 from interface_pkg.srv import ControlRequest
 
 from desktop_streaming_pkg.frame_utils import prepare_frame
+from desktop_streaming_pkg.portal_capture import PortalCapture, select_backend
 
 
 class DesktopStreamingNode(Node):
@@ -30,11 +29,13 @@ class DesktopStreamingNode(Node):
     def start(self):
         """Read configuration, open capture, and request control before streaming."""
         defaults = {
+            'backend': 'auto',
             'monitor': 1,
             'fps': 24.0,
             'preserve_aspect_ratio': True,
             'flip_second_screen': False,
             'service_timeout': 10.0,
+            'portal_timeout': 120.0,
         }
         values = {
             name: self.declare_parameter(
@@ -45,7 +46,8 @@ class DesktopStreamingNode(Node):
         fps = values['fps']
         self.service_timeout = values['service_timeout']
         for name, value in [('fps', fps),
-                            ('service_timeout', self.service_timeout)]:
+                            ('service_timeout', self.service_timeout),
+                            ('portal_timeout', values['portal_timeout'])]:
             if not math.isfinite(value) or value <= 0:
                 raise ValueError(f'{name} must be finite and greater than zero.')
         monitor_index = values['monitor']
@@ -53,6 +55,7 @@ class DesktopStreamingNode(Node):
             raise ValueError('monitor must be 0 (all monitors) or a positive index.')
         self.preserve_aspect_ratio = values['preserve_aspect_ratio']
         self.flip_second_screen = values['flip_second_screen']
+        backend = select_backend(values['backend'])
 
         request = GetParameters.Request()
         request.names = ['DISPLAY_WIDTH', 'DISPLAY_HEIGHT']
@@ -68,21 +71,28 @@ class DesktopStreamingNode(Node):
                              'DISPLAY_WIDTH and DISPLAY_HEIGHT values.')
         self.width, self.height = [v.integer_value for v in response.values]
 
-        if sys.platform.startswith('linux') and (
-            os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland'
-        ):
-            raise RuntimeError('MSS desktop capture requires an X11 session '
-                               'on Linux; native Wayland is not supported.')
         try:
-            self.capture = mss.MSS()
-            monitors = self.capture.monitors
-            if len(monitors) <= 1 or monitor_index >= len(monitors):
-                raise ValueError(
-                    f'Monitor {monitor_index} is unavailable; found '
-                    f'{max(0, len(monitors) - 1)} monitor(s). '
-                    'Use 0 for the combined desktop or 1..N for a monitor.'
+            if backend == 'portal':
+                self.get_logger().info(
+                    'Choose a screen in the desktop sharing dialog. '
+                    'The monitor parameter applies only to the MSS backend.'
                 )
-            self.monitor = monitors[monitor_index]
+                self.capture = PortalCapture(
+                    timeout=values['portal_timeout'],
+                    frame_timeout=self.service_timeout, is_running=rclpy.ok,
+                )
+                self.capture.start()
+                self.monitor = None
+            else:
+                self.capture = mss.MSS()
+                monitors = self.capture.monitors
+                if len(monitors) <= 1 or monitor_index >= len(monitors):
+                    raise ValueError(
+                        f'Monitor {monitor_index} is unavailable; found '
+                        f'{max(0, len(monitors) - 1)} monitor(s). '
+                        'Use 0 for the combined desktop or 1..N for a monitor.'
+                    )
+                self.monitor = monitors[monitor_index]
             # Verify capture and conversion before taking over the screen.
             self.capture_frame()
         except ScreenShotError as exc:
@@ -101,7 +111,7 @@ class DesktopStreamingNode(Node):
             raise RuntimeError(f'Screen control was denied: {response.message}')
         self.timer = self.create_timer(1.0 / fps, self.publish_frame)
         self.get_logger().info(
-            f'Streaming monitor {monitor_index} at up to {fps:g} FPS '
+            f'Streaming desktop using {backend} at up to {fps:g} FPS '
             f'to {self.width}x{self.height}.'
         )
 

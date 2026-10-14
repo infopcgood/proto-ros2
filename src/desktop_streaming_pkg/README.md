@@ -14,10 +14,10 @@ producer's frames to `screen_display`. This captures video only, without audio.
 ## Requirements and build
 
 - A ROS 2 environment compatible with the receiver (the project uses Jazzy).
-- An active graphical desktop. On Linux, use an **X11/Xorg session** with a valid
-  `DISPLAY` and access to that user's X server. Native Wayland capture is not
-  supported. Launch from a terminal in the desktop session, not a headless SSH
-  session. Do not disable X server access controls.
+- An active graphical desktop. On Linux, Wayland uses the desktop's screen-sharing
+  portal and PipeWire; X11 uses MSS with a valid `DISPLAY` and access to the user's
+  X server. Launch from a terminal in the desktop session, not a headless SSH
+  session. On Wayland, select a monitor in the system sharing dialog at startup.
 - [MSS](https://python-mss.readthedocs.io/v10.2.0/usage.html) 10.2.x and Pillow
   9.1 or later. MSS also supports Windows and macOS; the computer still needs a
   working ROS 2 installation, and macOS requires Screen Recording permission
@@ -78,7 +78,12 @@ ros2 run desktop_streaming_pkg desktop_streaming --ros-args \
   -p monitor:=1 -p fps:=24.0
 ```
 
-To capture all monitors or stretch the desktop to fill the display:
+The default `backend:=auto` selects `portal` on Wayland and `mss` elsewhere.
+On Wayland, `monitor` is ignored: choose the screen in the system sharing dialog.
+One monitor is shared per session. Canceling the dialog exits without taking
+screen control. Stopping sharing in the desktop UI terminates capture.
+
+To capture all monitors with MSS or stretch the desktop to fill the display:
 
 ```bash
 ros2 run desktop_streaming_pkg desktop_streaming --ros-args \
@@ -89,17 +94,62 @@ The package is started manually; `launch.sh` does not start the required
 parameter server or display backend. No changes to that script are needed to
 run a desktop producer on a separate computer.
 
+## Wayland setup (Ubuntu/Debian)
+
+Install the optional system bindings and PipeWire GStreamer plugin on the
+**desktop computer**. These are loaded only by the portal backend, and are not
+installed by `pip` or needed by the MSS backend:
+
+```bash
+sudo apt install python3-gi python3-gst-1.0 gir1.2-gst-plugins-base-1.0 \
+  gstreamer1.0-pipewire gstreamer1.0-plugins-base xdg-desktop-portal
+```
+
+PipeWire and a ScreenCast-capable portal backend for your desktop must be running
+in the logged-in user's session. GNOME normally uses `xdg-desktop-portal-gnome`,
+KDE uses `xdg-desktop-portal-kde`, and wlroots desktops need their corresponding
+backend. Use the backend appropriate to your desktop; installing the generic
+portal service alone does not supply screen capture.
+
+If using a virtual environment, it must use a system-compatible Python and expose
+system site packages to import `gi`. For a new environment, create it with
+`/usr/bin/python3 -m venv --system-site-packages <venv-path>`, then activate it,
+source ROS 2, install the Python requirements, and build. Check the interpreter
+used for the build with `python3 -c "import gi"`.
+
+After pulling the updated PR branch, rebuild and run:
+
+```bash
+colcon build --packages-up-to desktop_streaming_pkg
+source install/setup.bash
+ros2 run desktop_streaming_pkg desktop_streaming --ros-args -p backend:=portal
+```
+
+Select the screen in the system dialog. `portal_timeout` allows 120 seconds for
+each portal response, including the selection dialog. The first video frame must
+arrive within `service_timeout` seconds after selection. Streams are converted
+to CPU-readable BGRx frames with GStreamer, including handling padded rows and
+resolution changes; the output is resized to the existing display dimensions.
+The portal's default cursor mode is used (normally hidden).
+
+This follows the [XDG ScreenCast portal API](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.ScreenCast.html).
+Missing session services, unsupported compositor capture, or incompatible video
+buffer negotiation can still prevent capture. A real Wayland session and ROS 2
+transport have not been smoke-tested in the development environment.
+
 ## Parameters
 
 All parameters are read-only after startup; restart the node to change them.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `monitor` | `1` | MSS monitor index: `1..N` for an individual monitor, `0` for the combined desktop. The first monitor is not necessarily the OS primary monitor. |
+| `backend` | `auto` | `portal` on Wayland and `mss` elsewhere. Can be set explicitly to `portal` or `mss`; forcing MSS on Wayland is rejected. |
+| `monitor` | `1` | MSS only: `1..N` for an individual monitor, `0` for the combined desktop. The first monitor is not necessarily the OS primary monitor. The portal uses its screen-selection dialog instead. |
 | `fps` | `24.0` | Maximum requested capture rate; use a positive floating-point value. Actual throughput depends on capture, resizing, and transport. |
 | `preserve_aspect_ratio` | `true` | Fit the entire desktop with centered black padding; `false` stretches it to the display size. |
 | `flip_second_screen` | `false` | Forward the existing image flag used by the HUB75 backend. |
-| `service_timeout` | `10.0` | Positive timeout in seconds for each service discovery wait and each response wait. |
+| `service_timeout` | `10.0` | Positive timeout in seconds for each ROS service discovery/response wait and the first PipeWire frame. |
+| `portal_timeout` | `120.0` | Positive timeout in seconds for each portal response, including screen selection. |
 
 Display dimensions are fetched once at startup. Invalid dimensions, an
 unavailable monitor, a capture failure, an unavailable service, or rejected
@@ -119,9 +169,11 @@ ros2 service call /request_screen_control interface_pkg/srv/ControlRequest \
 
 ## Tests
 
-The frame tests use real Pillow conversions. The node contract tests replace ROS
-and capture APIs with test doubles, so they can run without ROS, a desktop, or
-LED hardware. They do not validate DDS transport or native desktop capture.
+The frame tests use real Pillow conversions. Node and portal contract tests
+replace ROS, D-Bus, and GStreamer APIs with test doubles, so they can run without
+ROS, a desktop, or LED hardware. They cover backend selection, portal cancellation
+and timeouts, frame strides, static frames, session revocation, and cleanup.
+They do not validate DDS transport or native desktop capture.
 
 ```bash
 PYTHONPATH=src/desktop_streaming_pkg python3 -m unittest discover \
