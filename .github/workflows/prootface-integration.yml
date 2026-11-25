@@ -44,7 +44,7 @@ jobs:
         working-directory: ws
         run: |
           source /opt/ros/jazzy/setup.bash
-          colcon build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
+          python3 -c 'from colcon_core.command import main; raise SystemExit(main())' build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
       - name: Core and LED-map tests
         working-directory: core
         run: |

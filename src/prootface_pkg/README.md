@@ -30,9 +30,14 @@ Source the ROS Jazzy installation appropriate to the machine, then build:
 
 ```sh
 cd ~/proto-ros2
-colcon build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
+python -c 'from colcon_core.command import main; raise SystemExit(main())' build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
 source install/setup.bash
 ```
+
+Invoking colcon through the active Python is deliberate: generated node entry
+points must use the environment containing the core and optional driver. A
+system-installed `colcon` executable can otherwise retain a system-Python
+shebang even while a venv is activated.
 
 The core dependency is pinned in the integration workflow. EGL can select a
 software Mesa renderer on a host without a GPU; the node logs the actual driver.
