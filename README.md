@@ -89,3 +89,11 @@ for dependencies, build instructions, receiver startup, and parameters.
 
 ## License
 All packages under this repository is distributed via the GPL-3.0 license.
+
+## Continuous face animation
+
+The Prootface integration adds calibrated continuous articulation, headless
+EGL rendering of two anatomical side views, and an atlas-aware WS backend.
+See [setup and launch instructions](src/prootface_pkg/README.md). The legacy
+PNG renderer and original launch script remain available. Physical dense-panel
+output requires the actual LED coordinate file and matching driver build.
