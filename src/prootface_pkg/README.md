@@ -14,7 +14,7 @@ must also provide the installed smileds driver. A venv needs system site package
 On a Mesa-based Debian/Ubuntu system:
 
 ```sh
-sudo apt install libegl1 libgles2 libgl1-mesa-dri python3-numpy python3-pil python3-venv
+sudo apt install libegl1 libgles2 libgl1-mesa-dri python3-numpy python3-pil python3-opencv python3-venv
 ```
 
 Install the separate public core checkout; do not copy private assets into either
