@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'proto_panel_display = proto_panel_display_pkg.proto_panel_display:main'
+            'proto_panel_display = proto_panel_display_pkg.proto_panel_display:main',
+            'atlas_display = proto_panel_display_pkg.atlas_display:main'
         ],
     },
 )

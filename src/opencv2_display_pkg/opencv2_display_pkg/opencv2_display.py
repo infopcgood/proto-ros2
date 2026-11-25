@@ -14,6 +14,10 @@ SCALE = 10
 class OpenCV2Display(Node):
     def __init__(self):
         super().__init__('opencv2_display_node')
+        self.declare_parameter('scale', SCALE)
+        self.scale = self.get_parameter('scale').value
+        if self.scale <= 0:
+            raise ValueError('scale must be positive')
 
         # Load settings
         self.param_cli = self.create_client(GetParameters, '/param_server_node/get_parameters')
@@ -37,7 +41,7 @@ class OpenCV2Display(Node):
         if self.DISPLAY_HEIGHT != image.height:
             return
         frame = (np.array(image.data).reshape((self.DISPLAY_HEIGHT, self.DISPLAY_WIDTH, 3))).astype(np.uint8)
-        big_frame = cv2.resize(frame, (self.DISPLAY_WIDTH * SCALE, self.DISPLAY_HEIGHT * SCALE), interpolation = cv2.INTER_NEAREST)
+        big_frame = cv2.resize(frame, (self.DISPLAY_WIDTH * self.scale, self.DISPLAY_HEIGHT * self.scale), interpolation = cv2.INTER_NEAREST)
         cv2.imshow('Display', big_frame)
         cv2.waitKey(1)
 
@@ -49,6 +53,5 @@ def main(args=None):
     except KeyboardInterrupt:
         node.get_logger().info('KeyboardInterrupt detected, halting...')
     finally:
-        node.stream.close()
         node.destroy_node()
         rclpy.shutdown()

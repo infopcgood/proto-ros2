@@ -1,0 +1,58 @@
+name: Prootface ROS Jazzy integration
+on:
+  push:
+    paths:
+      - '.github/workflows/prootface-integration.yml'
+      - 'src/prootface_pkg/**'
+      - 'src/osf_receiver_pkg/**'
+      - 'src/proto_panel_display_pkg/**'
+      - 'src/opencv2_display_pkg/**'
+      - 'src/param_server_pkg/**'
+permissions:
+  contents: read
+concurrency:
+  group: prootface-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    container: ros:jazzy-ros-base
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      ROS_DOMAIN_ID: '74'
+      ROS_LOCALHOST_ONLY: '1'
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+      LIBGL_ALWAYS_SOFTWARE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ws
+      - uses: actions/checkout@v4
+        with:
+          repository: infopcgood/prootface
+          ref: 62952f5cfade85c8cae95da3fc5c0571659a3e9b
+          path: core
+      - name: Install build and rendering dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y build-essential cmake python3-colcon-common-extensions python3-pip python3-setuptools python3-wheel python3-numpy python3-pil python3-pytest libegl1 libgles2 libgl1-mesa-dri ros-jazzy-rmw-cyclonedds-cpp
+          python3 -m pip install --break-system-packages --no-deps --no-build-isolation -e core
+      - name: Build actual ROS messages and nodes
+        working-directory: ws
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
+      - name: Core and LED-map tests
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source ws/install/setup.bash
+          python3 -m unittest discover -s core/tests -q
+          python3 -m unittest discover -s ws/src/proto_panel_display_pkg/test -p test_atlas_mapping.py -v
+      - name: Real UDP, ROS, EGL, calibration UI, dispatcher, driver-byte and launch tests
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source ws/install/setup.bash
+          python3 -m unittest discover -s ws/src/prootface_pkg/test -v
