@@ -16,12 +16,12 @@ import tempfile
 import time
 from types import SimpleNamespace
 import unittest
+import urllib.error
 import urllib.request
 from unittest.mock import patch
 
 import rclpy
 from rclpy.executors import SingleThreadedExecutor
-from rclpy.exceptions import ParameterImmutableException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from interface_pkg.msg import Image
@@ -75,17 +75,24 @@ class ROSPipelineTests(unittest.TestCase):
 
     def spin_until(self,predicate,timeout=10,payload=None,address=None):
         deadline=time.monotonic()+timeout
+        next_send = 0
         while time.monotonic()<deadline:
-            if payload is not None:self.socket.sendto(payload,address)
-            self.executor.spin_once(timeout_sec=.02)
+            now = time.monotonic()
+            if payload is not None and now >= next_send:
+                self.socket.sendto(payload, address)
+                next_send = now + 1/30
+            self.executor.spin_once(timeout_sec=.01)
             if predicate():return True
         return False
 
     def post(self,node,path,data):
         request=urllib.request.Request(f'http://127.0.0.1:{node.http.server_port}'+path,
                  json.dumps(data).encode(),{'Content-Type':'application/json'})
-        with urllib.request.urlopen(request,timeout=3) as response:
-            return json.load(response)
+        try:
+            with urllib.request.urlopen(request,timeout=3) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as exc:
+            self.fail(f'{path}: HTTP {exc.code}: {exc.read().decode()}')
 
     def tearDown(self):
         for node in reversed(self.nodes):
@@ -100,8 +107,9 @@ class ROSPipelineTests(unittest.TestCase):
             character_path=str(fixture(self.root)), profile_path=str(self.root/'profile.json'),
             side_width=32, side_height=32, web_port=-1)))
         self.assertTrue(self.spin_until(lambda: receiver.pub.get_subscription_count() > 0))
-        with self.assertRaises(ParameterImmutableException):
-            node.set_parameters(parameters(presentation_fps=6))
+        result = node.set_parameters(parameters(presentation_fps=6))[0]
+        self.assertFalse(result.successful)
+        self.assertEqual(node.get_parameter('presentation_fps').value, 24)
         self.socket.sendto(b''.join(packet(face_id=i) for i in range(8)), receiver.socket.getsockname())
         # Let the receiver publish the whole burst before the executor filters it.
         time.sleep(.1)
