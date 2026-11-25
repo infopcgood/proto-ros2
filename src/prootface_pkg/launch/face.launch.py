@@ -24,7 +24,8 @@ def generate_launch_description():
             'DISPLAY_HEIGHT':integer('side_height')}]),
         Node(package='screen_dispatcher_pkg',executable='screen_dispatcher'),
         Node(package='osf_receiver_pkg',executable='osf_receiver',condition=IfCondition(value('start_receiver')),
-             parameters=[{'udp_host':text('udp_host'),'udp_port':integer('udp_port')}]),
+             parameters=[{'udp_host':text('udp_host'),'udp_port':integer('udp_port')}],
+             remappings=[('osf_data',value('input_topic'))]),
         Node(package='prootface_pkg',executable='prootface',output='screen',parameters=[{
             'character_path':text('character'),'profile_path':text('profile'),'style_path':text('style'),
             'side_width':integer('side_width'),'side_height':integer('side_height'),

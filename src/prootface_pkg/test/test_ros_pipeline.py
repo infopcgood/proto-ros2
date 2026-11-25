@@ -152,6 +152,8 @@ class ROSPipelineTests(unittest.TestCase):
         character=fixture(self.root)
         probe=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);probe.bind(('127.0.0.1',0))
         port=probe.getsockname()[1];probe.close()
+        probe=socket.socket(socket.AF_INET,socket.SOCK_STREAM);probe.bind(('127.0.0.1',0))
+        web_port=probe.getsockname()[1];probe.close()
         observer=self.add(Node('launch_test_observer'));frames=[]
         observer.create_subscription(Image,'screen_display',lambda frame:frames.append(frame),1)
         log_path=self.root/'launch.log'
@@ -159,13 +161,23 @@ class ROSPipelineTests(unittest.TestCase):
             process=subprocess.Popen(['ros2','launch','prootface_pkg','face.launch.py',
                 'character:='+str(character),'profile:='+str(self.root/'profile.json'),
                 'backend:=none','side_width:=64','side_height:=64','presentation_fps:=6',
-                'web_port:=-1','udp_port:='+str(port)],stdout=log,stderr=subprocess.STDOUT)
+                'web_port:='+str(web_port),'udp_port:='+str(port),
+                'input_topic:=launch_test_osf'],stdout=log,stderr=subprocess.STDOUT)
             try:
                 success=self.spin_until(lambda:bool(frames) or process.poll() is not None,
                     30,packet(mouth_open=.8),('127.0.0.1',port))
                 self.assertTrue(success and frames,log_path.read_text())
                 self.assertEqual((frames[-1].width,frames[-1].height),(128,64))
                 self.assertFalse(frames[-1].flip_second_screen)
+                with urllib.request.urlopen(f'http://127.0.0.1:{web_port}/api/state',timeout=3) as response:
+                    state=json.load(response)
+                # Frames can be rendered at rest even without input. Verify the
+                # installed launch actually connects the remapped receiver.
+                if not state['received']:
+                    self.spin_until(lambda:False,.4,packet(mouth_open=.8),('127.0.0.1',port))
+                    with urllib.request.urlopen(f'http://127.0.0.1:{web_port}/api/state',timeout=3) as response:
+                        state=json.load(response)
+                self.assertGreater(state['received'],0,log_path.read_text())
             finally:
                 if process.poll() is None:process.send_signal(signal.SIGINT)
                 try:process.wait(timeout=15)
