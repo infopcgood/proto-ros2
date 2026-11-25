@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 import rclpy
 from rclpy.executors import SingleThreadedExecutor
+from rclpy.exceptions import ParameterImmutableException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from interface_pkg.msg import Image
@@ -92,6 +93,37 @@ class ROSPipelineTests(unittest.TestCase):
         self.executor.shutdown();self.socket.close()
         if rclpy.ok():rclpy.shutdown()
         self.temp.cleanup()
+
+    def test_multi_face_burst_retains_selected_face_and_parameters_are_read_only(self):
+        receiver = self.add(OSFReceiver(parameter_overrides=parameters(udp_port=0)))
+        node = self.add(ProotfaceNode(parameter_overrides=parameters(
+            character_path=str(fixture(self.root)), profile_path=str(self.root/'profile.json'),
+            side_width=32, side_height=32, web_port=-1)))
+        self.assertTrue(self.spin_until(lambda: receiver.pub.get_subscription_count() > 0))
+        with self.assertRaises(ParameterImmutableException):
+            node.set_parameters(parameters(presentation_fps=6))
+        self.socket.sendto(b''.join(packet(face_id=i) for i in range(8)), receiver.socket.getsockname())
+        # Let the receiver publish the whole burst before the executor filters it.
+        time.sleep(.1)
+        self.assertTrue(self.spin_until(lambda: node.app.received == 1, 3))
+        self.assertEqual(node.app.latest.face_id, 0)
+
+    def test_panel_watchdog_uses_wall_progress_with_simulated_ros_time_paused(self):
+        clears = []
+        driver = SimpleNamespace(leds_init=lambda *args: None, leds_set=lambda data: None,
+                                 leds_send=lambda: None, leds_clear=lambda: clears.append(True))
+        mapping = dict(schema=1, side_width=1, side_height=1, leds_per_strip=1,
+                       num_strips=1, pixels=[['left', 0, 0]])
+        path = self.root/'map.json'
+        path.write_text(json.dumps(mapping))
+        with patch.dict(sys.modules, {'smileds': driver}):
+            display = self.add(AtlasDisplay(parameter_overrides=parameters(
+                panel_map=str(path), driver_strips=1, stale_timeout=.05, use_sim_time=True)))
+            frame = Image()
+            frame.width, frame.height = 2, 1
+            frame.data = array('B', bytes(6))
+            display.on_frame(frame)
+            self.assertTrue(self.spin_until(lambda: bool(clears), 2))
 
     def test_udp_to_two_view_led_bytes_calibration_and_ownership(self):
         calls=[];clears=[]

@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: infopcgood/prootface
-          ref: 62952f5cfade85c8cae95da3fc5c0571659a3e9b
+          ref: 115197646e2387d27ca8e35dc35b4db04c9c5473
           path: core
       - name: Install build and rendering dependencies
         run: |

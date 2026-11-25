@@ -25,5 +25,14 @@ class AtlasMappingTests(unittest.TestCase):
         for data,width,height,flip in [(b'bad',4,1,False),(bytes(12),2,2,False),(bytes(12),4,1,True)]:
             with self.assertRaises(ValueError):mapping.rgb_bytes(data,width,height,flip)
 
+    def test_malformed_configuration_and_non_byte_data_are_rejected(self):
+        for config in (None, {'schema': 1}, {**configuration(), 'pixels': None}):
+            with self.assertRaises(ValueError):
+                AtlasMap(config)
+        mapping = AtlasMap(configuration())
+        for data in ([-1]*12, [256]*12, [1.5]*12, array('f', [0]*3)):
+            with self.assertRaises(ValueError):
+                mapping.rgb_bytes(data, 4, 1)
+
 
 if __name__=='__main__':unittest.main()

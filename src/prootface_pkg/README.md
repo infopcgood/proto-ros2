@@ -5,6 +5,9 @@ profile and causal controller, and renders a synchronized two-view BGR atlas.
 It uses the existing screen-control service and dispatcher. Legacy face and
 single-image display nodes remain available through their original entry points.
 
+[ROS API reference](API.md) lists topics, payload fields, read-only startup
+parameters, launch arguments, ownership and the LED mapping API.
+
 ## Install
 
 Use the same Python ABI/environment as rclpy. For WS hardware, that environment
@@ -114,11 +117,12 @@ filters producers and forwards selected frames to `screen_display`. Switching
 ownership to another producer is respected. The current dispatcher has no timed
 ownership lease or automatic crash failover.
 
+Input queues retain one multi-face datagram before filtering by face ID.
 The input callback retains valid selected-face measurements and latches contact.
 The steady 24 Hz controller runs independently of rendering. EGL belongs to a
 worker thread with at most one pending pose and one completed frame. Newer poses
 replace queued older ones; completed frames older than 250 ms are discarded.
-Tracking loss eases the character toward rest. A renderer failure is surfaced
+Tracking loss clears queued contact and eases the character toward rest. A renderer failure is surfaced
 instead of silently replaying old frames.
 
 The legacy `facial_expression` named-PNG command interface is not mapped to
