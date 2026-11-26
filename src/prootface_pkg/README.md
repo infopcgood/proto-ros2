@@ -2,8 +2,9 @@
 
 This package consumes the existing `osf_data`, applies the Prootface wearer
 profile and causal controller, and renders a synchronized two-view BGR atlas.
-It uses the existing screen-control service and dispatcher. Legacy face and
-single-image display nodes remain available through their original entry points.
+It uses the existing screen-control service and dispatcher. All Prootface input,
+preview and atlas-output adapters live inside this new package. Existing packages
+retain their pre-integration code and original entry points.
 
 [ROS API reference](API.md) lists topics, payload fields, read-only startup
 parameters, launch arguments, ownership and the LED mapping API.
@@ -33,7 +34,7 @@ Source the ROS Jazzy installation appropriate to the machine, then build:
 
 ```sh
 cd ~/proto-ros2
-python -c 'from colcon_core.command import main; raise SystemExit(main())' build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
+python -c 'from colcon_core.command import main; raise SystemExit(main())' build --symlink-install --packages-select interface_pkg screen_dispatcher_pkg prootface_pkg
 source install/setup.bash
 ```
 
@@ -56,8 +57,8 @@ ros2 launch prootface_pkg face.launch.py \
 ```
 
 The character requires a matching PNG texture sidecar. OpenSeeFace sends to
-127.0.0.1:11573 by default. This launch starts the shared receiver; do not also
-start the standalone Prootface UDP server. If the receiver already runs, pass
+127.0.0.1:11573 by default. This launch starts the optional Prootface-owned UDP input adapter; do not also
+start the standalone Prootface UDP server. If your existing receiver already runs, pass
 `start_receiver:=false`. The legacy PNG face node must not run and reclaim
 screen ownership during this launch.
 
@@ -109,6 +110,25 @@ Brightness remains a driver-specific integer; the existing default is retained.
 Frames with wrong dimensions, payload length or an extra flip flag are rejected.
 The backend clears stale output and clears on shutdown.
 
+## Package boundaries
+
+The original osf_receiver_pkg, proto_panel_display_pkg, opencv2_display_pkg and
+param_server_pkg are restored to commit 6110aa90568b796e18188dd3104e273d1e30c9f0.
+All pre-existing package trees match that revision. Prootface-specific executables
+are installed only by prootface_pkg: prootface, osf_input, atlas_display and
+preview_display. The launch does not start or reconfigure the legacy parameter
+server or display backends. Preview dimensions are local parameters.
+
+An existing OSFData publisher can be reused with start_receiver:=false. The
+udp_host/udp_port arguments apply only to our optional input adapter; they do not
+change the original receiver. Existing receiver behavior is preserved. Datagram
+validation, multi-face delivery and clean socket shutdown described by this
+package belong to its own optional input adapter.
+
+Future changes to existing packages are limited to adding parameters in
+param_server_pkg and adding new interface definitions in interface_pkg. Other
+existing package code, dependencies and interfaces must stay unchanged.
+
 ## Ownership, scheduling and failure behavior
 
 The face node asks for control once on startup using its fully qualified name.
@@ -131,7 +151,7 @@ UI. OpenSeeFace/Hailo startup and model deployment stay upstream of this package
 
 ## Validation
 
-The integration workflow builds real interface messages and seven ROS packages
+The integration workflow builds real interface messages and three ROS packages
 under Jazzy. It runs core/LED-map tests, then a UDP-to-ROS-to-EGL-to-dispatcher test
 with recorded driver bytes and a real installed-launch smoke test. Calibration
 HTTP, profile saving, ownership changes, malformed datagrams and multi-face input
@@ -139,7 +159,6 @@ are included. Fixtures are original synthetic geometry; no private character or
 recording is uploaded. The driver is a stub in CI, so physical output is not claimed.
 
 ```sh
-python3 -m unittest discover -s src/proto_panel_display_pkg/test -p test_atlas_mapping.py -v
 python3 -m unittest discover -s src/prootface_pkg/test -v
 ```
 

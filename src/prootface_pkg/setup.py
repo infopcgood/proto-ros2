@@ -10,4 +10,8 @@ setup(name='prootface_pkg',version='0.1.0',packages=find_packages(exclude=['test
       maintainer='infopcgood',maintainer_email='infopcgood@protonmail.com',
       description='Continuous two-side face renderer using the external prootface core',
       license='GPL-3.0-only',
-      entry_points={'console_scripts':['prootface = prootface_pkg.node:main']})
+      entry_points={'console_scripts':[
+          'prootface = prootface_pkg.node:main',
+          'osf_input = prootface_pkg.osf_input:main',
+          'atlas_display = prootface_pkg.atlas_display:main',
+          'preview_display = prootface_pkg.preview_display:main']})

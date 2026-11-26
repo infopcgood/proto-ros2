@@ -1,6 +1,11 @@
 # Working instructions
 
 - Preserve existing nodes and display ownership unless a task changes them.
+- User boundary: do not modify existing packages. The only permitted extensions
+  are adding parameters in param_server_pkg and adding new interface definitions
+  in interface_pkg; do not rewrite their existing behavior or definitions.
+- Keep all Prootface adapters, optional input/display nodes and tests inside the
+  new prootface_pkg. Do not add files or dependencies to existing packages.
 - Prootface integration uses the existing OSF receiver, continuous calibrated
   animation, a headless EGL renderer and one synchronized left/right atlas.
 - Private character assets, textures, compiled meshes and source-specific import

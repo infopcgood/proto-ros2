@@ -6,11 +6,11 @@
   <license>GPL-3.0-only</license>
   <depend>rclpy</depend>
   <depend>rcl_interfaces</depend><depend>interface_pkg</depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <depend>geometry_msgs</depend>
   <exec_depend>python3-numpy</exec_depend><exec_depend>python3-pil</exec_depend>
   <exec_depend>launch_ros</exec_depend><exec_depend>ament_index_python</exec_depend>
-  <exec_depend>osf_receiver_pkg</exec_depend><exec_depend>screen_dispatcher_pkg</exec_depend>
-  <exec_depend>param_server_pkg</exec_depend><exec_depend>opencv2_display_pkg</exec_depend>
-  <exec_depend>proto_panel_display_pkg</exec_depend>
+  <exec_depend>screen_dispatcher_pkg</exec_depend>
   <test_depend>python3-pytest</test_depend>
   <export><build_type>ament_python</build_type></export>
 </package>

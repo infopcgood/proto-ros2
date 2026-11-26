@@ -19,11 +19,8 @@ def generate_launch_description():
     text=lambda name:ParameterValue(value(name),value_type=str)
     backend=lambda name:IfCondition(PythonExpression(["'",value('backend'),"' == '",name,"'"]))
     nodes=[
-        Node(package='param_server_pkg',executable='param_server',parameters=[{
-            'DISPLAY_WIDTH':ParameterValue(PythonExpression(['2 * ',value('side_width')]),value_type=int),
-            'DISPLAY_HEIGHT':integer('side_height')}]),
         Node(package='screen_dispatcher_pkg',executable='screen_dispatcher'),
-        Node(package='osf_receiver_pkg',executable='osf_receiver',condition=IfCondition(value('start_receiver')),
+        Node(package='prootface_pkg',executable='osf_input',condition=IfCondition(value('start_receiver')),
              parameters=[{'udp_host':text('udp_host'),'udp_port':integer('udp_port')}],
              remappings=[('osf_data',value('input_topic'))]),
         Node(package='prootface_pkg',executable='prootface',output='screen',parameters=[{
@@ -32,8 +29,8 @@ def generate_launch_description():
             'presentation_fps':integer('presentation_fps'),'egl_platform':text('egl_platform'),
             'web_host':text('web_host'),'web_port':integer('web_port'),
             'face_id':integer('face_id'),'input_topic':text('input_topic')}]),
-        Node(package='opencv2_display_pkg',executable='opencv2_display',condition=backend('opencv'),parameters=[{'scale':2}]),
-        Node(package='proto_panel_display_pkg',executable='atlas_display',condition=backend('ws'),
+        Node(package='prootface_pkg',executable='preview_display',condition=backend('opencv'),parameters=[{'scale':2,'expected_width':ParameterValue(PythonExpression(['2 * ',value('side_width')]),value_type=int),'expected_height':integer('side_height')}]),
+        Node(package='prootface_pkg',executable='atlas_display',condition=backend('ws'),
              output='screen',parameters=[{'panel_map':text('panel_map'),'driver_strips':integer('driver_strips'),
                  'brightness':integer('brightness'),'expected_side_width':integer('side_width'),
                  'expected_side_height':integer('side_height')}]),

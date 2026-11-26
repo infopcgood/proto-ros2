@@ -1,7 +1,7 @@
 from array import array
 import copy
 import unittest
-from proto_panel_display_pkg.atlas_mapping import AtlasMap
+from prootface_pkg.atlas_mapping import AtlasMap
 
 
 def configuration():

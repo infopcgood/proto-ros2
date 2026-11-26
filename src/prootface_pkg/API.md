@@ -21,7 +21,7 @@ The face node retries unavailable/failed service calls; a completed denial ends
 its attempt. It does not periodically reclaim ownership from another producer.
 There is no timed ownership lease or crash failover.
 
-DDS uses reliable, volatile, keep-last defaults. The shared receiver publisher
+DDS uses reliable, volatile, keep-last defaults. The optional Prootface input publisher
 and face input subscriber each have depth 39 so a complete multi-face datagram
 is retained until face filtering. This is a bounded delivery queue, not a timed
 animation backlog. The application retains only the latest valid selected-face
@@ -92,25 +92,26 @@ ros2 launch prootface_pkg face.launch.py \
 | --- | --- | --- |
 | `character`, `profile`, `style` | `""`, default profile path above, `""` | Map to node `*_path` parameters |
 | `side_width`, `side_height`, `presentation_fps` | `256`, `144`, `24` | Rendering and presentation |
-| `face_id`, `input_topic` | `0`, `osf_data` | Selected face and shared receiver remapping |
+| `face_id`, `input_topic` | `0`, `osf_data` | Selected face and optional input-adapter remapping |
 | `web_host`, `web_port`, `egl_platform` | Same as node | HTTP and graphics |
 | `backend` | `opencv` | `opencv`, `ws`, or `none` |
-| `start_receiver` | `true` | Start the shared OpenSeeFace UDP receiver |
-| `udp_host`, `udp_port` | `127.0.0.1`, `11573` | Shared receiver bind address; port 0 is available for tests |
+| `start_receiver` | `true` | Start prootface_pkg/osf_input |
+| `udp_host`, `udp_port` | `127.0.0.1`, `11573` | Prootface input bind address; port 0 is available for tests |
 | `panel_map` | `""` | Required actual coordinate-map JSON for `ws` |
 | `driver_strips` | `8` | Must match map and installed smileds build; does not configure driver strip count |
 | `brightness` | `3` | Driver-specific integer passed to smileds |
 
-Launch also starts the existing parameter server and dispatcher. It sets the
-parameter server's atlas dimensions to `2 * side_width` and `side_height`.
-OpenCV uses scale 2. `backend:=none` still runs the publisher and dispatcher.
+Launch starts the existing dispatcher without changing its package. The optional
+input, OpenCV preview (scale 2) and WS atlas nodes all belong to prootface_pkg.
+The legacy parameter server and display nodes are not started or reconfigured.
+`backend:=none` still runs the publisher and dispatcher.
 If the receiver already exists, use `start_receiver:=false` and ensure its topic
 matches `input_topic`. Do not start a second UDP listener on the same port.
 
 ## Atlas WS backend and map API
 
-Executable: `ros2 run proto_panel_display_pkg atlas_display`.
-Node: `atlas_display_node`. Startup-only/read-only parameters:
+Executable: `ros2 run prootface_pkg atlas_display`.
+Node: `prootface_atlas_display_node`. Startup-only/read-only parameters:
 
 | Parameter | Default | Contract |
 | --- | --- | --- |
@@ -124,7 +125,7 @@ The watchdog runs on a steady timer, checks every 100 ms, and clears after the
 first accepted frame becomes stale. It also clears on shutdown. Wrong dimensions,
 byte count or an extra mirror flag reject a frame and do not refresh the watchdog.
 
-`proto_panel_display_pkg.atlas_mapping.AtlasMap(configuration)` and
+`prootface_pkg.atlas_mapping.AtlasMap(configuration)` and
 `AtlasMap.load(path)` are ROS-independent Python APIs requiring NumPy.
 `rgb_bytes(data, width, height, flip_second_screen=False) -> bytes` samples the
 BGR atlas into RGB physical-driver order. Data is a byte buffer or uint8 list.
@@ -142,3 +143,21 @@ Coordinates are integer side-local pixels with top-left origin. The map encodes
 rotation and wiring; no physical geometry is inferred. Schema/dimension/coordinate
 errors raise `ValueError`; file/JSON operations can also raise their usual errors.
 The legacy display executable and named-PNG face interface remain separate.
+
+## Package-owned optional input and preview
+
+`ros2 run prootface_pkg osf_input` starts `prootface_osf_input_node`. Its read-only
+parameters are `udp_host` (127.0.0.1) and `udp_port` (11573; zero selects a test
+port). It publishes OSFData on osf_data; standard ROS remapping selects another
+topic. Start only one UDP listener per address/port. Set launch start_receiver
+false when the existing unmodified receiver already publishes the desired topic.
+
+`ros2 run prootface_pkg preview_display` starts `prootface_preview_node` and
+subscribes to screen_display. Read-only parameters: scale=2, expected_width=0,
+expected_height=0. Zero accepts the incoming dimension; launch sets explicit
+atlas dimensions. The node validates BGR byte count, rejects an extra mirror,
+and owns its OpenCV window without using the global parameter server.
+
+All pre-existing packages retain their code from before this integration. Only
+new parameters in param_server_pkg and new definitions in interface_pkg may be
+added to existing packages in future work; do not alter their existing behavior.

@@ -4,10 +4,6 @@ on:
     paths:
       - '.github/workflows/prootface-integration.yml'
       - 'src/prootface_pkg/**'
-      - 'src/osf_receiver_pkg/**'
-      - 'src/proto_panel_display_pkg/**'
-      - 'src/opencv2_display_pkg/**'
-      - 'src/param_server_pkg/**'
 permissions:
   contents: read
 concurrency:
@@ -44,14 +40,13 @@ jobs:
         working-directory: ws
         run: |
           source /opt/ros/jazzy/setup.bash
-          python3 -c 'from colcon_core.command import main; raise SystemExit(main())' build --symlink-install --packages-select interface_pkg osf_receiver_pkg screen_dispatcher_pkg param_server_pkg opencv2_display_pkg proto_panel_display_pkg prootface_pkg
+          python3 -c 'from colcon_core.command import main; raise SystemExit(main())' build --symlink-install --packages-select interface_pkg screen_dispatcher_pkg prootface_pkg
       - name: Core and LED-map tests
         working-directory: core
         run: |
           source /opt/ros/jazzy/setup.bash
           source ../ws/install/setup.bash
           python3 -m unittest discover -s tests -q
-          python3 -m unittest discover -s ../ws/src/proto_panel_display_pkg/test -p test_atlas_mapping.py -v
       - name: Real UDP, ROS, EGL, calibration UI, dispatcher, driver-byte and launch tests
         run: |
           source /opt/ros/jazzy/setup.bash

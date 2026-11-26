@@ -13,7 +13,7 @@ from .atlas_mapping import AtlasMap
 
 class AtlasDisplay(Node):
     def __init__(self, **kwargs):
-        super().__init__('atlas_display_node', **kwargs)
+        super().__init__('prootface_atlas_display_node', **kwargs)
         self.started = False
         self.driver = None
         self.last_frame = None

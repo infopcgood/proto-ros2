@@ -28,9 +28,10 @@ from interface_pkg.msg import Image
 from interface_pkg.srv import ControlRequest
 from PIL import Image as PILImage
 
-from osf_receiver_pkg.osf_receiver import OSFReceiver
+from prootface_pkg.osf_input import OSFInput
 from prootface_pkg.node import ProotfaceNode
-from proto_panel_display_pkg.atlas_display import AtlasDisplay
+from prootface_pkg.preview_display import PreviewDisplay
+from prootface_pkg.atlas_display import AtlasDisplay
 from screen_dispatcher_pkg.screen_dispatcher import ScreenDispatcherNode
 
 
@@ -101,8 +102,29 @@ class ROSPipelineTests(unittest.TestCase):
         if rclpy.ok():rclpy.shutdown()
         self.temp.cleanup()
 
+    def test_package_owned_preview_checks_frames_without_a_global_param_server(self):
+        shown, resized, cleared = [], [], []
+        cv = SimpleNamespace(INTER_NEAREST=0,
+            resize=lambda frame, size, interpolation: resized.append(size) or frame,
+            imshow=lambda name, frame: shown.append(frame.copy()), waitKey=lambda delay: None,
+            destroyAllWindows=lambda: cleared.append(True))
+        with patch.dict(sys.modules, {'cv2': cv}):
+            preview = self.add(PreviewDisplay(parameter_overrides=parameters(
+                expected_width=2, expected_height=1)))
+            frame = Image()
+            frame.width, frame.height = 2, 1
+            frame.data = array('B', [1, 2, 3, 4, 5, 6])
+            preview.on_frame(frame)
+            self.assertEqual(resized, [(4, 2)])
+            self.assertEqual(shown[0].tobytes(), bytes(frame.data))
+            frame.flip_second_screen = True
+            preview.on_frame(frame)
+            self.assertEqual(preview.rejected, 1)
+            preview.destroy_node()
+            self.assertEqual(cleared, [True])
+
     def test_multi_face_burst_retains_selected_face_and_parameters_are_read_only(self):
-        receiver = self.add(OSFReceiver(parameter_overrides=parameters(udp_port=0)))
+        receiver = self.add(OSFInput(parameter_overrides=parameters(udp_port=0)))
         node = self.add(ProotfaceNode(parameter_overrides=parameters(
             character_path=str(fixture(self.root)), profile_path=str(self.root/'profile.json'),
             side_width=32, side_height=32, web_port=-1)))
@@ -138,7 +160,7 @@ class ROSPipelineTests(unittest.TestCase):
         driver=SimpleNamespace(leds_init=lambda *args:None,leds_set=lambda data:calls.append(data),
                                leds_send=lambda:None,leds_clear=lambda:clears.append(True))
         with patch.dict(sys.modules,{'smileds':driver}):
-            receiver=self.add(OSFReceiver(parameter_overrides=parameters(udp_port=0)))
+            receiver=self.add(OSFInput(parameter_overrides=parameters(udp_port=0)))
             dispatcher=self.add(ScreenDispatcherNode())
             node=self.add(ProotfaceNode(parameter_overrides=parameters(
                 character_path=str(fixture(self.root)),profile_path=str(self.root/'profile.json'),
