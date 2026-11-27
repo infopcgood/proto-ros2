@@ -165,8 +165,9 @@ class ROSPipelineTests(unittest.TestCase):
         self.assertEqual(node.app.mode, 'live')
         self.assertEqual(node.app.snapshot['expression']['parts']['mouth']['selected'], 'angry')
         # No more button messages; the selected bank persists through a closure.
-        self.assertTrue(self.spin_until(lambda: node.app.snapshot['pose']['aperture'] == 0,
-                                       3, packet(gap=0), address))
+        self.assertTrue(self.spin_until(lambda: node.app.snapshot['pose']['aperture'] == 0
+            and node.app.snapshot['pose']['blend_expr_angry_rest'] == 1,
+            3, packet(gap=0), address))
         self.assertEqual(node.app.snapshot['pose']['blend_expr_angry_open'], 0)
         self.assertEqual(node.app.snapshot['pose']['blend_expr_angry_rest'], 1)
         # A separate eye command does not replace the mouth's selected bank.
