@@ -24,7 +24,7 @@ import rclpy
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from interface_pkg.msg import Image
+from interface_pkg.msg import FacialExpression, Image
 from interface_pkg.srv import ControlRequest
 from PIL import Image as PILImage
 
@@ -51,12 +51,21 @@ def packet(face_id=0,gap=25,**features):
             +struct.pack('<210f',*([0.]*210))+struct.pack('<14f',*(values[k] for k in FEATURES)))
 
 
-def fixture(root):
+def fixture(root, expressions=False):
     points=[[-.6,-.6,.8],[.9,-.6,.8],[-.6,.6,.8],[-.6,-.6,-.8],[.9,-.6,-.8],[-.6,.6,-.8]]
     rig=dict(schema=2,positions=[v for p in points for v in p],uvs=[.25,.5]*3+[.75,.5]*3,
              parts=[dict(name='test',textured=True,indices=[0,1,2,3,4,5])],
              targets={'open':dict(indices=[0,1,2],deltas=[0,-.2,0]*3)},
              view=dict(zoom=1,offset=[0,0]),anatomical_left_sign=1)
+    if expressions:
+        rig['expression_sets'] = {}
+        for name, sign in [('happy', 1), ('angry', -1)]:
+            bank = {}
+            for phase in ('rest', 'open', 'round', 'wide', 'eye_left', 'eye_right'):
+                key = 'expr_' + name + '_' + phase
+                rig['targets'][key] = dict(indices=[0],deltas=[0,sign*.05,0])
+                bank[phase] = key
+            rig['expression_sets'][name] = bank
     path=root/'character.json';path.write_text(json.dumps(rig))
     image=PILImage.new('RGB',(2,1));image.putdata([(255,0,0),(0,255,0)]);image.save(path.with_suffix('.png'))
     return path
@@ -137,6 +146,38 @@ class ROSPipelineTests(unittest.TestCase):
         time.sleep(.1)
         self.assertTrue(self.spin_until(lambda: node.app.received == 1, 3))
         self.assertEqual(node.app.latest.face_id, 0)
+
+    def test_external_button_topic_latches_expression_while_speech_continues(self):
+        receiver = self.add(OSFInput(parameter_overrides=parameters(udp_port=0)))
+        node = self.add(ProotfaceNode(parameter_overrides=parameters(
+            character_path=str(fixture(self.root, expressions=True)),
+            profile_path=str(self.root/'profile.json'), side_width=32, side_height=32,
+            web_port=-1, expression_topic='test_expression_buttons')))
+        button = self.add(Node('expression_button_test'))
+        publisher = button.create_publisher(FacialExpression, 'test_expression_buttons', 10)
+        self.assertTrue(self.spin_until(lambda: publisher.get_subscription_count() > 0))
+        command = FacialExpression()
+        command.type, command.expression, command.override_time = 'emotion', 'angry', 0.
+        publisher.publish(command)
+        address = receiver.socket.getsockname()
+        self.assertTrue(self.spin_until(lambda: node.app.snapshot.get('pose', {}).get(
+            'blend_expr_angry_open', 0) > .5, 3, packet(mouth_open=.9), address))
+        self.assertEqual(node.app.mode, 'live')
+        self.assertEqual(node.app.snapshot['expression']['parts']['mouth']['selected'], 'angry')
+        # No more button messages; the selected bank persists through a closure.
+        self.assertTrue(self.spin_until(lambda: node.app.snapshot['pose']['aperture'] == 0,
+                                       3, packet(gap=0), address))
+        self.assertEqual(node.app.snapshot['pose']['blend_expr_angry_open'], 0)
+        self.assertEqual(node.app.snapshot['pose']['blend_expr_angry_rest'], 1)
+        # A separate eye command does not replace the mouth's selected bank.
+        command.type, command.expression = 'eyes', 'happy'
+        publisher.publish(command)
+        self.assertTrue(self.spin_until(lambda: node.app.snapshot['expression']['parts']['eyes']['selected'] == 'happy'))
+        self.assertEqual(node.app.snapshot['expression']['parts']['mouth']['selected'], 'angry')
+        command.type, command.expression = 'emotion', 'unsupported'
+        publisher.publish(command)
+        self.assertTrue(self.spin_until(lambda: node.expression_rejected == 1))
+        self.assertEqual(node.app.snapshot['expression']['parts']['mouth']['selected'], 'angry')
 
     def test_panel_watchdog_uses_wall_progress_with_simulated_ros_time_paused(self):
         clears = []

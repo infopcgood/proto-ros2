@@ -1,6 +1,7 @@
 """OpenSeeFace messages to calibrated, independently rendered side displays."""
 from array import array
 import json
+import math
 from pathlib import Path
 import time
 
@@ -9,7 +10,7 @@ from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.clock import Clock
 from rclpy.clock_type import ClockType
 from rclpy.node import Node
-from interface_pkg.msg import Image, OSFData
+from interface_pkg.msg import FacialExpression, Image, OSFData
 from interface_pkg.srv import ControlRequest
 
 from prootface.offscreen import OffscreenRenderer
@@ -32,6 +33,7 @@ class ProotfaceNode(Node):
                 style_path='', face_id=0, side_width=256, side_height=144,
                 presentation_fps=24, egl_platform='auto', web_host='127.0.0.1',
                 web_port=8080, input_topic='osf_data',
+                expression_topic='facial_expression', expression_transition=.2,
             )
             for key, value in defaults.items():
                 self.declare_parameter(key, value, ParameterDescriptor(read_only=True))
@@ -46,7 +48,12 @@ class ProotfaceNode(Node):
             if not character.is_file():
                 raise ValueError('Set character_path to the private compiled character JSON')
             self.app = Application(Path(value('profile_path')).expanduser(), value('face_id'))
+            self.app.configure_character(json.loads(character.read_text()))
             self.app.mode = 'live'
+            self.expression_transition = value('expression_transition')
+            if not math.isfinite(self.expression_transition) or not 0 <= self.expression_transition <= 2:
+                raise ValueError('expression_transition must be finite and in [0,2]')
+            self.expression_rejected = 0
             if value('style_path'):
                 self.app.command('/api/style', json.loads(
                     Path(value('style_path')).expanduser().read_text()
@@ -69,6 +76,9 @@ class ProotfaceNode(Node):
             # selected face before the callback gets to filter by face_id.
             self.subscription = self.create_subscription(
                 OSFData, value('input_topic'), self.on_measurement, 39
+            )
+            self.expression_subscription = self.create_subscription(
+                FacialExpression, value('expression_topic'), self.on_expression, 10
             )
             self.control = self.create_client(ControlRequest, 'request_screen_control')
             self.sender = self.get_fully_qualified_name()
@@ -116,10 +126,24 @@ class ProotfaceNode(Node):
             self.request = self.control.call_async(message)
             self.last_request = now
 
+    def on_expression(self, message):
+        part = {'emotion': 'face', 'face': 'face', 'mouth': 'mouth', 'eyes': 'eyes'}.get(message.type)
+        if part is None:
+            return
+        name = {'idle': 'neutral', 'smile': 'happy'}.get(message.expression, message.expression)
+        try:
+            self.app.select_expression(name, part=part, hold=message.override_time,
+                                       transition=self.expression_transition)
+        except ValueError as exc:
+            self.expression_rejected += 1
+            self.get_logger().warning('Expression command rejected: ' + str(exc))
+
     def tick(self):
         now = time.monotonic()
         self.request_control(now)
-        self.app.tick(now)
+        with self.app.lock:
+            now = time.monotonic()
+            self.app.tick(now)
         completed = self.worker.poll()
         if (completed is not None and self.has_grant
                 and 0 <= now - completed.pose_time <= TRACKING_TIMEOUT):

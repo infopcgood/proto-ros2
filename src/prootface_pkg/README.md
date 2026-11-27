@@ -78,6 +78,32 @@ Other launch arguments: `style` (optional JSON of supported style parameters),
 and `web_port`. Use `face_id` to select a tracked face (default zero), and
 `input_topic` to select another OSFData topic if the receiver is remapped.
 
+## External expression buttons
+
+The face node subscribes to facial_expression using the existing FacialExpression
+message. Buttons select a latched expression; OpenSeeFace continues driving
+speech. No emotion inference is performed.
+
+```sh
+ros2 topic pub --once /facial_expression interface_pkg/msg/FacialExpression \
+  '{type: emotion, expression: angry, override_time: 0.0}'
+```
+
+Available names depend on the compiled character: neutral, happy, angry, sad and
+unamused. type=emotion (or face) selects both eye/mouth banks; type=eyes or mouth
+selects one independently. Zero override_time latches until another command or
+restart. A positive duration temporarily overrides the latched choice and then
+returns. Repeated identical commands do not extend the hold. idle and smile are
+aliases for neutral and happy; other legacy PNG/phoneme names are not guessed.
+
+Launch arguments expression_topic (default facial_expression) and
+expression_transition (default 0.2 seconds, range 0–2) configure this new node.
+Transitions run at 24 Hz while speech continues, with contact and full blinks
+retaining priority. Tracking loss closes the mouth while preserving the chosen
+expression. Older compiled characters support neutral only and reject missing
+banks; install a newly compiled private character pair for the added poses.
+HTTP buttons can alternatively POST {"expression":"angry"} to /api/expression.
+
 ## Dense WS hardware
 
 ```sh

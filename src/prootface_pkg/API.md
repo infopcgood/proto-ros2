@@ -11,6 +11,7 @@ Topic/service names below are relative to the ROS namespace.
 | Interface | Type | Direction / behavior |
 | --- | --- | --- |
 | `osf_data` (configurable `input_topic`) | `interface_pkg/msg/OSFData` | Face node subscribes; selects `face_id`, validates data, uses local monotonic receipt time. |
+| `facial_expression` (configurable `expression_topic`) | `interface_pkg/msg/FacialExpression` | External button selection of expression banks; independent of speech input. |
 | `request_screen_display` | `interface_pkg/msg/Image` | Face node publishes completed two-view atlases after its startup control grant. |
 | `request_screen_control` | `interface_pkg/srv/ControlRequest` | Face node requests screen ownership once using its fully qualified node name. |
 | `screen_display` | `interface_pkg/msg/Image` | Existing dispatcher forwards frames matching its `dominating_node_name`. OpenCV or atlas WS backend subscribes. |
@@ -66,6 +67,8 @@ use the shared HTTP API instead. Standard ROS parameters are separate.
 | `style_path` | string, `""` | Optional JSON of supported style fields; loaded once |
 | `face_id` | integer, `0` | Nonnegative tracked face ID |
 | `input_topic` | string, `osf_data` | OSFData subscription topic |
+| `expression_topic` | string, `facial_expression` | External expression-command topic |
+| `expression_transition` | float, `0.2` | Bank crossfade duration in seconds, 0–2 |
 | `side_width` | integer, `256` | Per-view virtual width, 1–4096 |
 | `side_height` | integer, `144` | Per-view virtual height, 1–4096 |
 | `presentation_fps` | integer, `24` | Exactly 24, 12 or 6; controller remains 24 Hz |
@@ -93,6 +96,7 @@ ros2 launch prootface_pkg face.launch.py \
 | `character`, `profile`, `style` | `""`, default profile path above, `""` | Map to node `*_path` parameters |
 | `side_width`, `side_height`, `presentation_fps` | `256`, `144`, `24` | Rendering and presentation |
 | `face_id`, `input_topic` | `0`, `osf_data` | Selected face and optional input-adapter remapping |
+| `expression_topic`, `expression_transition` | `facial_expression`, `0.2` | Button input and transition duration |
 | `web_host`, `web_port`, `egl_platform` | Same as node | HTTP and graphics |
 | `backend` | `opencv` | `opencv`, `ws`, or `none` |
 | `start_receiver` | `true` | Start prootface_pkg/osf_input |
@@ -161,3 +165,22 @@ and owns its OpenCV window without using the global parameter server.
 All pre-existing packages retain their code from before this integration. Only
 new parameters in param_server_pkg and new definitions in interface_pkg may be
 added to existing packages in future work; do not alter their existing behavior.
+
+## External expression commands
+
+Use the existing interface_pkg/msg/FacialExpression fields: type selects emotion
+(or face) for the whole face, or eyes/mouth for one channel; expression is a
+compiled bank name; override_time is zero for a latched selection or positive
+seconds for a temporary override returning to the latched choice. Default banks
+are neutral, happy, angry, sad and unamused when supplied by the character. idle
+and smile alias neutral and happy. Invalid/unavailable commands are rejected
+without changing the current selection and increment expression_rejected on the
+node. No existing interface definition or package is modified.
+
+HTTP provides the same selection at POST /api/expression with expression, optional
+part (face/eyes/mouth), hold and transition fields. Snapshot expression reports
+available banks and per-part selected/latched names, weights and monotonic expiry.
+Zero-duration holds persist through speech and tracking loss until changed or
+restarted. Duplicate commands do not restart transitions or extend holds.
+The detailed geometry/composition contract is in the core
+[expression reference](https://github.com/infopcgood/prootface/blob/master/docs/EXPRESSIONS.md).

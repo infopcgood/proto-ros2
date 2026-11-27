@@ -20,3 +20,7 @@
   CM4 and physical LED measurements.
 - Update integration docs/status at milestones and publish using expected head
   SHAs. Never force-push over concurrent changes.
+
+- Expressions are externally selected through the existing FacialExpression
+  interface. Do not add emotion inference or modify existing packages to route
+  button events. Keep expression state independent of speech and tracking loss.
